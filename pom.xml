@@ -13,6 +13,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <org.springframework.version>4.1.6.RELEASE</org.springframework.version>
         <org.glassfish.jersey.version>2.17</org.glassfish.jersey.version>
+        <org.eclipse.jetty.version>9.1.3.v20140225</org.eclipse.jetty.version>
     </properties>
 
     <dependencies>
@@ -121,20 +122,24 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
+
+            <!-- Jetty 9 support for integration testing-->
             <plugin>
                 <!-- Add an out of the box run capability: mvn jetty:run -->
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-maven-plugin</artifactId>
-                <version>9.1.3.v20140225</version>
+                <version>${org.eclipse.jetty.version}</version>
                 <configuration>
+                    <stopKey>STOP</stopKey>
+                    <stopPort>9999</stopPort>
                     <scanIntervalSeconds>0</scanIntervalSeconds>
                     <webAppConfig>
                         <contextPath>/${project.artifactId}</contextPath>
                     </webAppConfig>
                 </configuration>
 
-                <!-- Handle collision of ASM libs between Jetty 9 and Spring 4 on Java 8 -->
                 <dependencies>
+                    <!-- Handle collision of ASM libs between Jetty 9 and Spring 4 on Java 8 -->
                     <dependency>
                         <groupId>org.ow2.asm</groupId>
                         <artifactId>asm</artifactId>
@@ -145,7 +150,53 @@
                         <artifactId>asm-commons</artifactId>
                         <version>5.0.2</version>
                     </dependency>
+
+                    <!-- Prevent shutdown from whining. -->
+                    <dependency>
+                        <groupId>org.eclipse.jetty</groupId>
+                        <artifactId>jetty-jsp</artifactId>
+                        <version>${org.eclipse.jetty.version}</version>
+                    </dependency>
                 </dependencies>
+
+                <!-- Spin up/shut down Jetty for our integration tests (see FailSafe configuration below). -->
+                <executions>
+                    <execution>
+                        <id>start-jetty</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                            <goal>run-war</goal>
+                        </goals>
+                        <configuration>
+                            <scanIntervalSeconds>0</scanIntervalSeconds>
+                            <daemon>true</daemon>
+                            <stopKey>STOP</stopKey>
+                            <stopPort>9999</stopPort>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>stop-jetty</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Wire up FailSafe to run integration tests-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>2.18.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
