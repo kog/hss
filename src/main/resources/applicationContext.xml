@@ -3,6 +3,9 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-       <bean class="com._8x8.cloud.hss.resource.StreamResource" id="streamResource"/>
+       <bean class="com._8x8.cloud.hss.resource.StreamResource" id="streamResource">
+              <property name="streamService" ref="streamService"/>
+       </bean>
 
+       <bean class="com._8x8.cloud.hss.service.StreamService" id="streamService"/>
 </beans>
