@@ -132,6 +132,7 @@
                 <configuration>
                     <stopKey>STOP</stopKey>
                     <stopPort>9999</stopPort>
+                    <stopWait>10</stopWait>
                     <scanIntervalSeconds>0</scanIntervalSeconds>
                     <webAppConfig>
                         <contextPath>/${project.artifactId}</contextPath>
@@ -173,6 +174,7 @@
                             <daemon>true</daemon>
                             <stopKey>STOP</stopKey>
                             <stopPort>9999</stopPort>
+                            <stopWait>10</stopWait>
                         </configuration>
                     </execution>
                     <execution>
