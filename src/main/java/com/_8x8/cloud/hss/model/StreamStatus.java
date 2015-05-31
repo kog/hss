@@ -9,8 +9,19 @@ package com._8x8.cloud.hss.model;
  */
 public enum StreamStatus
 {
-    // TODO [kog@epiphanic.org - 5/28/15]: refactor this when we add in filters/actions. These are temporary.
+    /**
+     * The stream in question has successfully been stored and processed. Consider this "complete" and ready for reading.
+     */
+    SUCCESSFUL,
 
-    FOUND,
+    /**
+     * The stream is being processed: it is either still uploading or being processed by one of the optional filters
+     * (encryption, deflation).
+     */
+    IN_PROGRESS,
+
+    /**
+     * The stream in question is unknown to the system: no stream for the ID has been submitted.
+     */
     NOT_FOUND
 }

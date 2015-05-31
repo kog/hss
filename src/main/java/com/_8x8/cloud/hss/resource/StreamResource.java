@@ -32,7 +32,14 @@ import java.util.regex.Pattern;
  *      <li>One of the following characters: !, -, _, ., *, ', (, and )</li>
  * </ul><p/>
  *
- * These characters are taken from the Amazon S3 guide.
+ * These characters are taken from the Amazon S3 guide.<p/>
+ *
+ * Please note that this is a naive implementation, and is missing things you'd expect if you were actually solving this
+ * problem in a production environment. The goal here is to solve the problem with a good balance between not being crap
+ * code, and not taking too long to do so...<p/>
+ *
+ * You'd usually expect to see things like proper exception handling, localization, pagination (for multi-status), maybe
+ * E-tag support for some of the operations, auth/auth etc.
  *
  * @author kog@epiphanic.org
  * @since 05/28/2015
