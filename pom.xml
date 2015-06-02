@@ -15,6 +15,7 @@
         <org.glassfish.jersey.version>2.17</org.glassfish.jersey.version>
         <org.eclipse.jetty.version>9.1.3.v20140225</org.eclipse.jetty.version>
         <org.slf4j.version>1.7.12</org.slf4j.version>
+        <org.powermock.version>1.6.2</org.powermock.version>
     </properties>
 
     <dependencies>
@@ -142,6 +143,18 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
             <version>${org.springframework.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-module-junit4</artifactId>
+            <version>${org.powermock.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-api-mockito</artifactId>
+            <version>${org.powermock.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

@@ -14,7 +14,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-// TODO [kog@epiphanic.org - 5/29/15]: Add more unit testing when the collaboration is sorted out.
+// TODO [kog@epiphanic.org - 6/2/15]: Finish filling this in.
 
 /**
  * Tests the {@link StreamResource} at the unit level.

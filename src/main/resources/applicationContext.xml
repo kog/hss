@@ -14,5 +14,8 @@
 
     <bean class="com._8x8.cloud.hss.service.StreamService" id="streamService" init-method="init">
         <property name="streamStorageDirectory" ref="storageDirectory"/>
+        <property name="filterManager" ref="filterManager"/>
     </bean>
+
+    <bean class="com._8x8.cloud.hss.filter.FilterManager" id="filterManager" init-method="init"/>
 </beans>

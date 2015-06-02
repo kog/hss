@@ -3,6 +3,7 @@ package com._8x8.cloud.hss.resource;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.glassfish.jersey.internal.util.Base64;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,6 +20,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.io.File;
 import java.io.InputStream;
+import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.equalTo;
@@ -26,8 +28,6 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
-
-// TODO [kog@epiphanic.org - 5/30/15]: Filter support.
 
 /**
  * Tests the {@link StreamResource} at the integration level. Please note that you must be running HSS in a servlet
@@ -76,7 +76,7 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests {@link StreamResource#getStreamById(String)} for the happy path. We should get a 200/OK with our input
+     * Tests {@link StreamResource#getStreamById(String, List)} for the happy path. We should get a 200/OK with our input
      * stream.
      */
     @Test
@@ -98,7 +98,7 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests {@link StreamResource#getStreamById(String)} for the case where the ID is not know to the system. We should
+     * Tests {@link StreamResource#getStreamById(String, List)} for the case where the ID is not know to the system. We should
      * get a 404/NOT FOUND here.
      */
     @Test
@@ -114,7 +114,7 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests {@link StreamResource#getStreamById(String)} for the case where the ID of the stream is considered invalid.
+     * Tests {@link StreamResource#getStreamById(String, List)} for the case where the ID of the stream is considered invalid.
      * This should return a 403/FORBIDDEN.
      */
     @Test
@@ -127,7 +127,7 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests {@link StreamResource#createStream(UriInfo, String, InputStream)} for the happy path. We should get a
+     * Tests {@link StreamResource#createStream(UriInfo, String, List, InputStream)} for the happy path. We should get a
      * 201/CREATED with a location header to the new resource.
      */
     @Test
@@ -159,7 +159,7 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests {@link StreamResource#createStream(UriInfo, String, InputStream)} for the case where we're trying to create
+     * Tests {@link StreamResource#createStream(UriInfo, String, List, InputStream)} for the case where we're trying to create
      * a stream for an ID that already exists. We should get a 409/CONFLICT back here.
      */
     @Test
@@ -182,7 +182,7 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests {@link StreamResource#createStream(UriInfo, String, InputStream)} for the case where we're trying to create
+     * Tests {@link StreamResource#createStream(UriInfo, String, List, InputStream)} for the case where we're trying to create
      * a stream for an invalid ID. We should get a 403/FORBIDDEN here.
      */
     @Test
@@ -201,7 +201,7 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests {@link StreamResource#updateStream(String, InputStream)} for the happy path. We should get a 204/NO CONTENT
+     * Tests {@link StreamResource#updateStream(String, List, InputStream)} for the happy path. We should get a 204/NO CONTENT
      * back.
      */
     @Test
@@ -236,7 +236,7 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests {@link StreamResource#updateStream(String, InputStream)} for the case where we're trying to update an ID
+     * Tests {@link StreamResource#updateStream(String, List, InputStream)} for the case where we're trying to update an ID
      * that doesn't already exist. This should return a 404/NOT FOUND.
      */
     @Test
@@ -255,7 +255,7 @@ public class StreamResourceITCase
     }
     
     /**
-     * Tests {@link StreamResource#updateStream(String, InputStream)} for the case where we're trying an invalid ID. We
+     * Tests {@link StreamResource#updateStream(String, List, InputStream)} for the case where we're trying an invalid ID. We
      * should get a 403/FORBIDDEN back.
      */
     @Test
@@ -273,8 +273,8 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests a round trip of {@link StreamResource#createStream(UriInfo, String, InputStream)}, {@link StreamResource#getStreamById(String)}
-     * for a binary object, in this case, an image.
+     * Tests a round trip of {@link StreamResource#createStream(UriInfo, String, List, InputStream)},
+     * {@link StreamResource#getStreamById(String, List)} for a binary object, in this case, an image.
      */
     @Test
     public void testBinaryRoundTrip() throws Exception
@@ -307,5 +307,128 @@ public class StreamResourceITCase
 
         // Clean up after ourselves. Hopefully.
         FileUtils.deleteQuietly( new File(_storageDirectory, _uuid));
+    }
+
+    /**
+     * Tests a round trip where our filters match, and we expect the happy path.
+     */
+    @Test
+    public void testRoundTripWithFilters() throws Exception
+    {
+        // Verify nothing is on the filesystem with that ID.
+        final File file = new File(_storageDirectory, _uuid);
+        Assert.assertThat(false, is(equalTo(file.exists())));
+
+        // Let's post that bad boy as app/octet-stream.
+        final InputStream fauxFile = IOUtils.toInputStream(_testPayload);
+        final Response response = _client.path(String.format("/%s", _uuid))
+                .queryParam("filters", "zip", "encrypt", "base64")
+                .request()
+                .post(Entity.entity(fauxFile, MediaType.APPLICATION_OCTET_STREAM_TYPE));
+
+        // We should get back a 201/CREATED with a Location header to /(uuid).
+        final String location = response.getLocation().toASCIIString();
+        Assert.assertThat(201, is(equalTo(response.getStatus())));
+        Assert.assertThat(URL_PREFIX + "/" + _uuid, is(equalTo(location)));
+
+        // And if we hit that resource, we should get our file back.
+        final WebTarget newClient = ClientBuilder.newClient().target(location);
+
+        final Response getResponse = newClient.queryParam("filters", "zip", "encrypt", "base64")
+                .request("application/octet-stream")
+                .get();
+
+        // We should get a 200/OK with what we wrote to the filesystem earlier.
+        Assert.assertThat(200, is(equalTo(getResponse.getStatus())));
+        Assert.assertThat(getResponse.readEntity(String.class), is(equalTo(_testPayload)));
+
+        // Make sure we've actually done something with our filters...
+        Assert.assertThat(FileUtils.readFileToString(file), is(not(equalTo(_testPayload))));
+
+        // Clean up after ourselves. Hopefully.
+        FileUtils.deleteQuietly(file);
+    }
+
+    // TODO [kog@epiphanic.org - 6/2/15]: Should probably come in with an ExceptionMapper here.
+
+    /**
+     * Tests a round trip where our input and output filters don't match. The outbound filters are going to fail since
+     * we're going to try and unzip and decrypt something we can't. We'll get back a 500/INTERNAL SERVER ERROR here.
+     */
+    @Test
+    public void testRoundTripWithMisMatchedFilters() throws Exception
+    {
+        // Verify nothing is on the filesystem with that ID.
+        final File file = new File(_storageDirectory, _uuid);
+        Assert.assertThat(false, is(equalTo(file.exists())));
+
+        // Let's post that bad boy as app/octet-stream.
+        final InputStream fauxFile = IOUtils.toInputStream(_testPayload);
+        final Response response = _client.path(String.format("/%s", _uuid))
+                .queryParam("filters", "base64")
+                .request()
+                .post(Entity.entity(fauxFile, MediaType.APPLICATION_OCTET_STREAM_TYPE));
+
+        // We should get back a 201/CREATED with a Location header to /(uuid).
+        final String location = response.getLocation().toASCIIString();
+        Assert.assertThat(201, is(equalTo(response.getStatus())));
+        Assert.assertThat(URL_PREFIX + "/" + _uuid, is(equalTo(location)));
+
+        // And if we hit that resource, we should get our file back.
+        final WebTarget newClient = ClientBuilder.newClient().target(location);
+
+        final Response getResponse = newClient.queryParam("filters", "zip", "encrypt", "base64")
+                                              .request("application/octet-stream")
+                                              .get();
+
+        // We should get a 200/OK with, but it won't match.
+        Assert.assertThat(500, is(equalTo(getResponse.getStatus())));
+
+        // Demonstrate that all we've done is Base64 encoded our value.
+        Assert.assertThat(FileUtils.readFileToString(file).trim(), is((equalTo(Base64.encodeAsString(_testPayload)))));
+
+        // Clean up after ourselves. Hopefully.
+        FileUtils.deleteQuietly(file);
+    }
+
+    /**
+     * Tests a round trip where we've asked for filters that don't exist. This should be the same as a regular round
+     * trip.
+     */
+    @Test
+    public void testRoundTripWithUnknownFilters() throws Exception
+    {
+        // Verify nothing is on the filesystem with that ID.
+        final File file = new File(_storageDirectory, _uuid);
+        Assert.assertThat(false, is(equalTo(file.exists())));
+
+        // Let's post that bad boy as app/octet-stream.
+        final InputStream fauxFile = IOUtils.toInputStream(_testPayload);
+        final Response response = _client.path(String.format("/%s", _uuid))
+                                         .queryParam("filters", "taters", "nottaters")
+                                         .request()
+                                         .post(Entity.entity(fauxFile, MediaType.APPLICATION_OCTET_STREAM_TYPE));
+
+        // We should get back a 201/CREATED with a Location header to /(uuid).
+        final String location = response.getLocation().toASCIIString();
+        Assert.assertThat(201, is(equalTo(response.getStatus())));
+        Assert.assertThat(URL_PREFIX + "/" + _uuid, is(equalTo(location)));
+
+        // And if we hit that resource, we should get our file back.
+        final WebTarget newClient = ClientBuilder.newClient().target(location);
+
+        final Response getResponse = newClient.queryParam("filters", "taters", "nottaters")
+                                              .request("application/octet-stream")
+                                              .get();
+
+        // We should get a 200/OK with what we wrote to the filesystem earlier.
+        Assert.assertThat(200, is(equalTo(getResponse.getStatus())));
+        Assert.assertThat(getResponse.readEntity(String.class), is(equalTo(_testPayload)));
+
+        // And then demonstrate the file has had nothing done to it.
+        Assert.assertThat(FileUtils.readFileToString(file), is(equalTo(_testPayload)));
+
+        // Clean up after ourselves. Hopefully.
+        FileUtils.deleteQuietly(file);
     }
 }

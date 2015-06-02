@@ -12,12 +12,14 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.io.InputStream;
+import java.util.List;
 import java.util.regex.Pattern;
 
 // TODO [kog@epiphanic.org - 5/28/15]: Clean up stream handling when filters are in place.
@@ -39,7 +41,10 @@ import java.util.regex.Pattern;
  * code, and not taking too long to do so...<p/>
  *
  * You'd usually expect to see things like proper exception handling, localization, pagination (for multi-status), maybe
- * E-tag support for some of the operations, auth/auth etc.
+ * E-tag support for some of the operations, auth/auth etc.<p/>
+ *
+ * With respect to filters: please note that these are handled via a "soft failure:" if you ask for a filter that does
+ * not exist, nothing will occur.
  *
  * @author kog@epiphanic.org
  * @since 05/28/2015
@@ -83,6 +88,7 @@ public class StreamResource
      * Attempts to gets a stream by a given ID.
      *
      * @param id The ID to use for the stream. Must not be blank, must be valid.
+     * @param filters A collection of zero or more filters to apply to the given stream. May be empty, but must not be null.
      *
      * @return 200/OK with the stream if known,
      *         403/FORBIDDEN if the ID is invalid,
@@ -91,11 +97,11 @@ public class StreamResource
     @Path("/{id}")
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response getStreamById(final @PathParam("id") String id) throws Exception
+    public Response getStreamById(final @PathParam("id") String id, @QueryParam("filters") final List<String> filters) throws Exception
     {
         validateId(id);
 
-        final InputStream file = getStreamService().getStreamById(id);
+        final InputStream file = getStreamService().getStreamById(id, filters);
 
         if (null != file)
         {
@@ -108,10 +114,11 @@ public class StreamResource
 
     /**
      * Attempts to create a stream for a given ID. Please note that this is not an upsert call, and if a stream already
-     * exists for a given ID, a 409/CONFLICT will be returned. Please see {@link #updateStream(String, InputStream)} for updates.
+     * exists for a given ID, a 409/CONFLICT will be returned. Please see {@link #updateStream(String, List, InputStream)} for updates.
      *
      * @param uriInfo Passed by Jersey, allows us to create our Location header. Must not be null.
      * @param id The ID to use for the stream. Must not be blank, must be valid.
+     * @param filters A collection of zero or more filters to apply to the given stream. May be empty, but must not be null.
      * @param stream The stream to store. Must not be null or empty.
      *
      * @return 201/CREATED with a Location header pointing to the new resource if creation was successful,
@@ -121,7 +128,7 @@ public class StreamResource
     @Path("/{id}")
     @POST
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-    public Response createStream(final @Context UriInfo uriInfo, final @PathParam("id") String id, final InputStream stream) throws Exception
+    public Response createStream(final @Context UriInfo uriInfo, final @PathParam("id") String id, @QueryParam("filters") final List<String> filters, final InputStream stream) throws Exception
     {
         try
         {
@@ -132,7 +139,7 @@ public class StreamResource
                 return Response.status(Response.Status.CONFLICT).build();
             }
 
-            getStreamService().saveStream(id, stream);
+            getStreamService().saveStream(id, stream, filters);
         }
         finally
         {
@@ -144,9 +151,10 @@ public class StreamResource
 
     /**
      * Attempts to update a stream for a given ID, using the given filters. Please note that if a stream for a given ID
-     * does not already exists, an error will be thrown. If you wish to create the stream for the ID, please call {@link #createStream(UriInfo, String, InputStream)}.<p/>
+     * does not already exists, an error will be thrown. If you wish to create the stream for the ID, please call {@link #createStream(UriInfo, String, List, InputStream)}.<p/>
      *
      * @param id The ID to use for the stream. Must not be blank, must be valid.
+     * @param filters A collection of zero or more filters to apply to the given stream. May be empty, but must not be null.
      * @param stream The stream to store. Must not be null or empty.
      *
      * @return 204/NO CONTENT if the update was successful,
@@ -156,7 +164,7 @@ public class StreamResource
     @Path("/{id}")
     @PUT
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-    public Response updateStream(final @PathParam("id") String id, final InputStream stream) throws Exception
+    public Response updateStream(final @PathParam("id") String id, @QueryParam("filters") final List<String> filters, final InputStream stream) throws Exception
     {
         try
         {
@@ -167,7 +175,7 @@ public class StreamResource
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
-            getStreamService().saveStream(id, stream);
+            getStreamService().saveStream(id, stream, filters);
         }
         finally
         {

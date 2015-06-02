@@ -3,6 +3,7 @@ package com._8x8.cloud.hss.service;
 import com._8x8.cloud.hss.model.StreamStatus;
 
 import java.io.InputStream;
+import java.util.List;
 
 // TODO [kog@epiphanic.org - 5/30/15]: Should probably not bubble up Exceptions here... Either that, or use an ExceptionMapper.
 
@@ -20,12 +21,13 @@ public interface IStreamService
      * Please note that callers are responsible for closing the returned {@link InputStream}.
      *
      * @param id The ID of the stream to fetch. Must not be blank, must be valid.
+     * @param filters A list of zero or more filters to apply to the stream. May be empty, but must not be null.
      *
      * @return An {@link InputStream} pointing to the resource, if known, else null.
      *
      * @throws Exception If we fail to return the stream for the given ID. This must be handled up the call stack.
      */
-    InputStream getStreamById(String id) throws Exception;
+    InputStream getStreamById(String id, List<String> filters) throws Exception;
 
     /**
      * Obtains the {@link StreamStatus} for a given stream object, by ID.<p/>
@@ -43,8 +45,9 @@ public interface IStreamService
      *
      * @param id The ID to use for the stream. Must not be blank, must be valid.
      * @param stream An {@link InputStream} to the resource to save. Must not be null, must be valid.
+     * @param filters A list of zero or more filters to apply to the stream. May be empty, but must not be null.
      *
      * @throws Exception If we fail to return the stream for the given ID. This must be handled up the call stack.
      */
-    void saveStream(String id, InputStream stream) throws Exception;
+    void saveStream(String id, InputStream stream, List<String> filters) throws Exception;
 }

@@ -1,14 +1,14 @@
 package com._8x8.cloud.hss.service;
 
+import com._8x8.cloud.hss.filter.FilterManager;
 import com._8x8.cloud.hss.model.StreamStatus;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
-
-// TODO [kog@epiphanic.org - 5/30/15]: Add filtering support.
+import java.io.OutputStream;
+import java.util.List;
 
 /**
  * Provides a concrete implementation of {@link IStreamService}.<p/>
@@ -28,6 +28,11 @@ public class StreamService implements IStreamService
      * Holds a {@link File} pointing to where we're going to store our streams. Defaults to <code>/tmp/foo</code>.
      */
     private File _streamStorageDirectory = new File("/tmp/foo");
+
+    /**
+     * Holds the {@link FilterManager} we use for applying filters to streams.
+     */
+    public FilterManager _filterManager;
 
     /**
      * Gets the {@link File} we're using as a base location to store our streams.
@@ -51,6 +56,26 @@ public class StreamService implements IStreamService
     }
 
     /**
+     * Gets the {@link FilterManager} to use for applying filters to streams.
+     *
+     * @return A non-null, valid and fully wired {@link FilterManager} for managing our streams.
+     */
+    public FilterManager getFilterManager()
+    {
+        return _filterManager;
+    }
+
+    /**
+     * Sets the {@link FilterManager} to use for applying filters to streams.
+     *
+     * @param filterManager A non-null, valid and fully wired {@link FilterManager} for managing our streams.
+     */
+    public void setFilterManager(FilterManager filterManager)
+    {
+        _filterManager = filterManager;
+    }
+
+    /**
      * Takes care of the initialization logic for our stream storage: making sure our storage directory actually exists
      * and such.
      */
@@ -64,11 +89,11 @@ public class StreamService implements IStreamService
     }
 
     @Override
-    public InputStream getStreamById(final String id) throws Exception
+    public InputStream getStreamById(final String id, final List<String> filters) throws Exception
     {
         if (getStatusForStreamById(id) != StreamStatus.NOT_FOUND)
         {
-            return FileUtils.openInputStream(createFileForId(id));
+            return getFilterManager().prepareInputFilters(FileUtils.openInputStream(createFileForId(id)), filters);
         }
 
         return null;
@@ -88,9 +113,9 @@ public class StreamService implements IStreamService
     }
 
     @Override
-    public void saveStream(final String id, final InputStream stream) throws Exception
+    public void saveStream(final String id, final InputStream stream, final List<String> filters) throws Exception
     {
-        try (final FileOutputStream outputStream = FileUtils.openOutputStream(createFileForId(id)))
+        try (final OutputStream outputStream = getFilterManager().prepareOutputFilters(FileUtils.openOutputStream(createFileForId(id)), filters))
         {
             IOUtils.copyLarge(stream, outputStream);
         }
