@@ -18,10 +18,12 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
+import java.util.zip.GZIPInputStream;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -431,4 +433,57 @@ public class StreamResourceITCase
         // Clean up after ourselves. Hopefully.
         FileUtils.deleteQuietly(file);
     }
+    
+    /**
+     * Tests the Accept-Encoding header of "gzip" to demonstrate that Jersey can actually already do this. If you still
+     * don't trust that this test isn't some trick of Jersey Client, you can try this via telnet pretty easily:<p/>
+     *
+     * Write a file to wherever you're storing the files with a text editor, in plain text. Then run HSS, and telnet
+     * to localhost on port 8080. Pass in the following (with asdf being whatever file you wrote) in:
+     *
+     * <pre>
+     *      GET /hss/api/streams/asdf HTTP/1.1
+     *      Host: asdf
+     *      Accept-Encoding: gzip
+     *      (CRLF)
+     * </pre>
+     *
+     * And lo... binary appears. Try it without the header, and lo! plain text appears.
+     */
+    @Test
+    public void testGzipAcceptEncodingHeader() throws Exception
+    {
+        // We're going to cheat and write the file straight to the filesystem.
+        final File file = new File(_storageDirectory, _uuid);
+        FileUtils.write(file, _testPayload);
+
+        // Grab the response, allowing for an Accept-Encoding of gzip.
+        final Response response = _client.path(_uuid)
+                                         .request("application/octet-stream")
+                                         .header("Accept-Encoding", "gzip")
+                                         .get();
+
+        // We should get a 200/OK with what we wrote to the filesystem earlier.
+        Assert.assertThat(200, is(equalTo(response.getStatus())));
+
+        // We should also get a Content-Encoding value here of "gzip."
+        Assert.assertThat("gzip", is(equalTo(response.getHeaderString("Content-Encoding"))));
+
+        // We're going to want this as a byte[] because we can only consume the entity once.
+        final byte[] payload = response.readEntity(byte[].class);
+
+        // Just so there's nothing up our sleeves...
+        Assert.assertThat(_testPayload, is(not(equalTo(new String(payload)))));
+
+        // Now, read that back through a gzip stream...
+        try(final ByteArrayInputStream byteStream = new ByteArrayInputStream(payload);
+            final GZIPInputStream gzipStream = new GZIPInputStream(byteStream))
+        {
+            // And voila!
+            Assert.assertThat(_testPayload, is(equalTo(IOUtils.toString(gzipStream))));
+        }
+
+        // Clean up after ourselves. Hopefully.
+        FileUtils.deleteQuietly(file);
+    } 
 }
