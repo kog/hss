@@ -22,6 +22,12 @@
             <param-name>javax.ws.rs.Application</param-name>
             <param-value> com._8x8.cloud.hss.JerseyApplication</param-value>
         </init-param>
+
+        <!-- Add some media types for the UriConnegFilter so that people can do content negotiation via URIs (IE: foo.json). -->
+        <init-param>
+            <param-name>jersey.config.server.mediaTypeMappings</param-name>
+            <param-value>xml : application/xml, json : application/json</param-value>
+        </init-param>
     </servlet>
 
     <servlet-mapping>

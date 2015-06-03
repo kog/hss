@@ -1,13 +1,17 @@
 package com._8x8.cloud.hss.service;
 
 import com._8x8.cloud.hss.filter.FilterManager;
+import com._8x8.cloud.hss.model.StreamMetadata;
 import com._8x8.cloud.hss.model.StreamStatus;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 // TODO [kog@epiphanic.org - 6/2/15]: There are some race conditions with regards to the various stream statuses. Should probably
@@ -135,6 +139,37 @@ public class StreamService implements IStreamService
         {
             FileUtils.forceDelete(createFileForId(id));
         }
+    }
+
+    @Override
+    public Collection<StreamMetadata> getMetadataForStreams() throws Exception
+    {
+        final Collection<StreamMetadata> metadata = new ArrayList<>();
+
+        FileUtils.iterateFiles(getStreamStorageDirectory(), TrueFileFilter.INSTANCE, TrueFileFilter.INSTANCE)
+                 .forEachRemaining(file -> metadata.add(getMetadataForStreamById(file.getName())));
+
+        return metadata;
+    }
+
+    // TODO [kog@epiphanic.org - 6/2/15]: Revisit when other statuses added.
+
+    @Override
+    public StreamMetadata getMetadataForStreamById(String id)
+    {
+        final File file = createFileForId(id);
+        final StreamMetadata metadata = new StreamMetadata();
+
+        metadata.setId(id);
+        metadata.setStatus(file.exists() ? StreamStatus.SUCCESSFUL : StreamStatus.NOT_FOUND);
+
+        if (file.exists())
+        {
+            metadata.setFileSize(file.length());
+            metadata.setLastModified(file.lastModified());
+        }
+
+        return metadata;
     }
 
     /**

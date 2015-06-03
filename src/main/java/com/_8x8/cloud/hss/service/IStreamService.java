@@ -1,8 +1,10 @@
 package com._8x8.cloud.hss.service;
 
+import com._8x8.cloud.hss.model.StreamMetadata;
 import com._8x8.cloud.hss.model.StreamStatus;
 
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.List;
 
 // TODO [kog@epiphanic.org - 5/30/15]: Should probably not bubble up Exceptions here... Either that, or use an ExceptionMapper.
@@ -59,4 +61,22 @@ public interface IStreamService
      * @throws Exception If deletion fails for a given reason. This must be handled up the call stack.
      */
     void deleteStream(String id) throws Exception;
+
+    /**
+     * Attempts to find a piece of {@link StreamMetadata} on all streams known to the system.
+     *
+     * @return A collection of zero or more {@link StreamMetadata}, one for each known stream. May be empty, but never null.
+     */
+    Collection<StreamMetadata> getMetadataForStreams() throws Exception;
+
+    /**
+     * Attempts to return the {@link StreamMetadata} associated with a given stream.
+     *
+     * @param id The ID of the stream to retrieve {@link StreamMetadata} for. Must not be blank, must be valid. Does not
+     *           need to exist, however data points may be missing if the stream does not exist.
+     *
+     * @return A non-null, valid {@link StreamMetadata} entity, describing the given stream. May not be particularly
+     * useful if the given stream does not actually exist.
+     */
+    StreamMetadata getMetadataForStreamById(String id) throws Exception;
 }

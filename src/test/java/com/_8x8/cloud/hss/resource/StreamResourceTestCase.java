@@ -413,6 +413,66 @@ public class StreamResourceTestCase
     }
 
     /**
+     * Tests {@link StreamResource#getStreamMetadata()} to make sure it does what we expect. We should get back a
+     * 200/OK.
+     */
+    @Test
+    public void testGetStreamMetadata() throws Exception
+    {
+        Assert.assertThat(200, is(equalTo(_resource.getStreamMetadata().getStatus())));
+
+        verify(_resource).getStreamMetadata();
+        verify(_resource).getStreamService();
+
+        verify(_streamService).getMetadataForStreams();
+
+        verifyNoMoreCollaborations();
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamMetadataForId(String)} for the happy case. We should get back a 200/OK here.
+     */
+    @Test
+    public void testGetStreamMetadataForId() throws Exception
+    {
+        Assert.assertThat(200, is(equalTo(_resource.getStreamMetadataForId("asdf").getStatus())));
+
+        verify(_resource).getStreamMetadataForId("asdf");
+        verify(_resource).validateId("asdf");
+        verify(_resource).getStreamService();
+
+        verify(_streamService).getMetadataForStreamById("asdf");
+
+        verifyNoMoreCollaborations();
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamMetadataForId(String)} for the case where an invalid ID is passed. We should
+     * get back a 403/FORBIDDEN here.
+     */
+    @Test
+    public void testGetStreamMetadataForInvalidId() throws Exception
+    {
+        doCallRealMethod().when(_resource).validateId(anyString());
+
+        try
+        {
+            _resource.getStreamMetadataForId("inv@lidp@th");
+            Assert.fail("Whoops, we should have caught an exception here...");
+        }
+        catch(final WebApplicationException ex)
+        {
+            // We should get a 403/FORBIDDEN here.
+            Assert.assertThat(ex.getResponse().getStatus(), is(equalTo(Response.Status.FORBIDDEN.getStatusCode())));
+        }
+
+        verify(_resource).getStreamMetadataForId(anyString());
+        verify(_resource).validateId(anyString());
+
+        verifyNoMoreCollaborations();
+    }
+
+    /**
      * Because we're throwing a WebApplicationException for now, this is a little wonky... wrap our assertions into
      * a convenience method for easy running.
      *

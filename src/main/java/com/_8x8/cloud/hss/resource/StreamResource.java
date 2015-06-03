@@ -1,5 +1,6 @@
 package com._8x8.cloud.hss.resource;
 
+import com._8x8.cloud.hss.model.StreamMetadataCollection;
 import com._8x8.cloud.hss.model.StreamStatus;
 import com._8x8.cloud.hss.service.IStreamService;
 import org.apache.commons.io.IOUtils;
@@ -83,6 +84,39 @@ public class StreamResource
     public void setStreamService(IStreamService streamService)
     {
         _streamService = streamService;
+    }
+
+    // TODO [kog@epiphanic.org - 6/2/15]: Pagination, query criteria etc.
+
+    /**
+     * Returns a {@link com._8x8.cloud.hss.model.StreamMetadataCollection} with metadata for all known collections.
+     *
+     * @return A 200/OK with metadata regarding zero or more streams. May be empty, but never null.
+     */
+    @GET
+    public Response getStreamMetadata() throws Exception
+    {
+        final StreamMetadataCollection metadata = new StreamMetadataCollection();
+        metadata.getMetadata().addAll(getStreamService().getMetadataForStreams());
+
+        return Response.ok(metadata).build();
+    }
+
+    /**
+     * Returns the {@link com._8x8.cloud.hss.model.StreamMetadata} associated with the stream ID, if the ID is valid.
+     *
+     * @param id The ID to use for the stream. Must not be blank, must be valid.
+     *
+     * @return 200/OK with the {@link com._8x8.cloud.hss.model.StreamMetadata},
+     *         403/FORBIDDEN if the stream ID is invalid
+     */
+    @Path("/{id}/status")
+    @GET
+    public Response getStreamMetadataForId(final @PathParam("id") String id) throws Exception
+    {
+        validateId(id);
+
+        return Response.ok(getStreamService().getMetadataForStreamById(id)).build();
     }
 
     /**

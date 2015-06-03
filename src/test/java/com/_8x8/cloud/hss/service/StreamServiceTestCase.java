@@ -1,13 +1,17 @@
 package com._8x8.cloud.hss.service;
 
 import com._8x8.cloud.hss.filter.FilterManager;
+import com._8x8.cloud.hss.model.StreamMetadata;
 import com._8x8.cloud.hss.model.StreamStatus;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.IOFileFilter;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
@@ -15,11 +19,13 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyString;
@@ -31,6 +37,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.verifyStatic;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 // TODO [kog@epiphanic.org - 6/2/15]: Add cases for other statuses when added.
 
@@ -253,6 +260,78 @@ public class StreamServiceTestCase
         FileUtils.forceDelete(any(File.class));
 
         verifyNoMoreCollaboratingInteractions();
+    }
+
+    /**
+     * Tests {@link StreamService#getMetadataForStreams()} for the happy path.
+     */
+    @Test
+    public void testGetMetadataForStreams() throws Exception
+    {
+        doReturn(mock(StreamMetadata.class)).when(_streamService).getMetadataForStreamById(anyString());
+
+        final File file = new File("/tmp/foo/asdf");
+        when(FileUtils.iterateFiles(any(File.class), any(IOFileFilter.class), any(IOFileFilter.class))).thenReturn(Collections.singletonList(file).iterator());
+
+        _streamService.getMetadataForStreams();
+
+        // Verify our call stack.
+        verify(_streamService).getMetadataForStreams();
+        verify(_streamService).getStreamStorageDirectory();
+        verify(_streamService).getMetadataForStreamById(file.getName());
+
+        verifyNoMoreCollaboratingInteractions();
+
+        // And now make sure we're using TrueFileFilter.INSTANCE as we expect to.
+        final ArgumentCaptor<IOFileFilter> argumentCaptor = ArgumentCaptor.forClass(IOFileFilter.class);
+        verifyStatic(times(1));
+
+        FileUtils.iterateFiles(any(File.class), argumentCaptor.capture(), argumentCaptor.capture());
+
+        for (final IOFileFilter fileFilter : argumentCaptor.getAllValues())
+        {
+            Assert.assertThat(fileFilter, is(equalTo(TrueFileFilter.INSTANCE)));
+        }
+    }
+
+    /**
+     * Tests {@link StreamService#getMetadataForStreamById(String)} for the case where our file exists.
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    @Test
+    public void testGetMetadataForStreamById() throws Exception
+    {
+        final File file = spy(new File("/tmp/asdf"));
+
+        doReturn(true).when(file).exists();
+        doReturn(900L).when(file).length();
+        doReturn(8675309L).when(file).lastModified();
+
+        doReturn(file).when(_streamService).createFileForId(anyString());
+
+        final StreamMetadata metadata = _streamService.getMetadataForStreamById("asdf");
+
+        Assert.assertThat("asdf", is(metadata.getId()));
+        Assert.assertThat(StreamStatus.SUCCESSFUL, is(metadata.getStatus()));
+        Assert.assertThat(900L, is(metadata.getFileSize()));
+        Assert.assertThat(8675309L, is(metadata.getLastModified()));
+    }
+
+    /**
+     * Tests {@link StreamService#getMetadataForStreamById(String)} for the case where the ID is unknown.
+     */
+    @Test
+    public void testGetMetadataForStreamByIdForUnknownId() throws Exception
+    {
+        final File file = new File("/tmp/asdf");
+        doReturn(file).when(_streamService).createFileForId(anyString());
+
+        final StreamMetadata metadata = _streamService.getMetadataForStreamById("asdf");
+
+        Assert.assertThat("asdf", is(metadata.getId()));
+        Assert.assertThat(StreamStatus.NOT_FOUND, is(metadata.getStatus()));
+        Assert.assertThat(metadata.getFileSize(), is(nullValue()));
+        Assert.assertThat(metadata.getLastModified(), is(nullValue()));
     }
 
     private void verifyNoMoreCollaboratingInteractions()

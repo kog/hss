@@ -1,5 +1,8 @@
 package com._8x8.cloud.hss.resource;
 
+import com._8x8.cloud.hss.model.StreamMetadata;
+import com._8x8.cloud.hss.model.StreamMetadataCollection;
+import com._8x8.cloud.hss.model.StreamStatus;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -506,5 +509,183 @@ public class StreamResourceITCase
 
         // And the file should no longer exist.
         Assert.assertThat(file.exists(), is(false));
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamMetadata()} for the happy path, where we have multiple streams.
+     */
+    @Test
+    public void testGetStreamMetadata() throws Exception
+    {
+        // Put some files on the filesystem.
+        final File firstFile = new File(_storageDirectory, _uuid);
+        FileUtils.write(firstFile, _testPayload);
+
+        final File secondFile = new File(_storageDirectory, UUID.randomUUID().toString());
+        FileUtils.write(secondFile, "Totally awesomelyrandompayloaddddd " + secondFile.getName());
+
+        // Go grab the statuses.
+        final Response response = _client.request().get();
+
+        // We should grab a 200/OK back, and the entity should be our metadata collection.
+        Assert.assertThat(200, is(equalTo(response.getStatus())));
+        final StreamMetadataCollection metadataCollection = response.readEntity(StreamMetadataCollection.class);
+
+        // Make sure we have the right number of items.
+        Assert.assertThat(2, is(equalTo(metadataCollection.getMetadata().size())));
+
+        // Make sure the metadata matches the file.
+        assertMetadataMatchesFile(firstFile, metadataCollection.getMetadata().get(0));
+        assertMetadataMatchesFile(secondFile, metadataCollection.getMetadata().get(1));
+
+        // Clean up our temp files.
+        FileUtils.forceDelete(firstFile);
+        FileUtils.forceDelete(secondFile);
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamMetadata()} for the case where we have no known streams.
+     */
+    @Test
+    public void testGetStreamMetadataWithNoStreams() throws Exception
+    {
+        // We should have nothing on disk here.
+        final Response response = _client.request().get();
+
+        // We should get back a 200/OK with an empty collection.
+        Assert.assertThat(200, is(equalTo(response.getStatus())));
+        final StreamMetadataCollection metadataCollection = response.readEntity(StreamMetadataCollection.class);
+
+        Assert.assertThat(0, is(equalTo(metadataCollection.getMetadata().size())));
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamMetadataForId(String)} for the happy path. We should get back a 200/OK that
+     * with metadata that is fully populated.
+     */
+    @Test
+    public void testGetStreamMetadataForId() throws Exception
+    {
+        // Write the file out to disk, so we know it's there.
+        final File file = new File(_storageDirectory, _uuid);
+        FileUtils.write(file, _testPayload);
+
+        final Response response = _client.path(_uuid).path("status").request().get();
+
+        // We should get back a 200/OK with metadata about our input file.
+        Assert.assertThat(200, is(equalTo(response.getStatus())));
+
+        final StreamMetadata metadata = response.readEntity(StreamMetadata.class);
+        assertMetadataMatchesFile(file, metadata);
+
+        // Clean up on aisle 5.
+        FileUtils.forceDelete(file);
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamMetadataForId(String)}for the case where the ID is unknown. We should get back
+     * a status with only part of the metadata populated: non-existent files can't have a size.
+     */
+    @Test
+    public void testGetStreamMetadataForUnknownId() throws Exception
+    {
+        final Response response = _client.path(_uuid).path("status").request().get();
+
+        // We should get back a 200/OK with metadata about our input file.
+        Assert.assertThat(200, is(equalTo(response.getStatus())));
+
+        final StreamMetadata metadata = response.readEntity(StreamMetadata.class);
+
+        // We'll have an ID and a status, always.
+        Assert.assertThat(_uuid, is(equalTo(metadata.getId())));
+        Assert.assertThat(StreamStatus.NOT_FOUND, is(equalTo(metadata.getStatus())));
+
+        // We will not have a last mod time or a file size here.
+        Assert.assertThat(metadata.getLastModified(), is(nullValue()));
+        Assert.assertThat(metadata.getFileSize(), is(nullValue()));
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamMetadataForId(String)} for the case where the given ID is invalid. We should
+     * get back a 403/FORBIDDEN here.
+     */
+    @Test
+    public void testGetStreamMetadataForInvalidId() throws Exception
+    {
+        final Response response = _client.path("badp@th").path("status").request().get();
+        Assert.assertThat(403, is(equalTo(response.getStatus())));
+    }
+
+    /**
+     * Now that we're returning things other than application/octet-stream, content negotiation via URLs has been
+     * enabled in the web.xml. This means that for a given resource you can tack on either <code>.json</code> or
+     * <code>.xml</code> and it will act as if you set the <code>Content-Type</code> header.<p/>
+     *
+     * By default our setup should actually provide us with XML, due to JAXB + Jersey, so we're going to test the three
+     * standard cases:<p/>
+     *
+     * <ul>
+     *     <li>No Content-Type or conneg URL specified. We should get XML here.</li>
+     *     <li>Conneg URL specified as <code>.json</code>. We should get JSON here.</li>
+     *     <li>Conneg URL specified as <code>.xml</code>. We should get XML here.</li>
+     * </ul>
+     *
+     * It is also worth noting that because we use an {@link javax.xml.bind.annotation.XmlType} with a property order,
+     * we can reliably do some pretty handy things with our raw content, without having to parse it.<p/>
+     *
+     * Lastly, we're going to use the {@link StreamResource#getStreamMetadata()} endpoint so that we can also make sure
+     * that the collection looks good in both raw XML and raw JSON for binding in other languages.
+     */
+    @Test
+    public void testContentNegotiation() throws Exception
+    {
+        // Write our test file.
+        final File file = new File(_storageDirectory, _uuid);
+        FileUtils.write(file, _testPayload);
+
+        doTestContentNegotiationTestRun("", "xml", _uuid, file.lastModified());
+        doTestContentNegotiationTestRun(".json", "json", _uuid, file.lastModified());
+        doTestContentNegotiationTestRun(".xml", "xml", _uuid, file.lastModified());
+
+        // Clean our test file up.
+        FileUtils.forceDelete(file);
+    }
+
+    /**
+     * Provides a convenience method to do a test run for {@link #testContentNegotiation()}.
+     *
+     * @param urlAddition The bit to tack on to the URL for content negotiation. May be empty, but never null.
+     * @param type The "type" - this should either be <code>xml</code> or <code>json</code> and never blank.
+     * @param uuid The UUID for the test run. This must not be blank, and is used for token replacement.
+     * @param lastModTime The last modification time of the file. This must be greater than zero and is used for token replacement.
+     */
+    private void doTestContentNegotiationTestRun(final String urlAddition, final String type, final String uuid, final long lastModTime) throws Exception
+    {
+        final Response response = ClientBuilder.newClient().target(URL_PREFIX + urlAddition).request().get();
+        Assert.assertThat(200, is(equalTo(response.getStatus())));
+
+        final String rawData = response.readEntity(String.class);
+        final String knownGoodData = IOUtils.toString(getClass().getResourceAsStream("/contentNegotiationPayload." + type))
+                                            .replace("%UUID%", uuid)
+                                            .replace("%LASTMOD%", String.valueOf(lastModTime));
+
+        Assert.assertThat(rawData, is(equalTo(knownGoodData)));
+    }
+
+    /**
+     * Provides a convenience method to make sure that our given {@link StreamMetadata} matches the {@link File} we
+     * created on the filesystem.
+     *
+     * @param file The {@link File} to compare. Must not be null.
+     * @param streamMetadata {@link StreamMetadata} about the given {@link File}. Must not be null.
+     */
+    private void assertMetadataMatchesFile(final File file, final StreamMetadata streamMetadata)
+    {
+        Assert.assertThat(file.getName(), is(equalTo(streamMetadata.getId())));
+        Assert.assertThat(file.length(), is(equalTo(streamMetadata.getFileSize())));
+        Assert.assertThat(file.lastModified(), is(equalTo(streamMetadata.getLastModified())));
+
+        // This is pretty much invariant at the moment...
+        Assert.assertThat(streamMetadata.getStatus(), is(equalTo(StreamStatus.SUCCESSFUL)));
     }
 }
