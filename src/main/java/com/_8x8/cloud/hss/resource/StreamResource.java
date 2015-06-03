@@ -6,6 +6,7 @@ import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
@@ -183,6 +184,26 @@ public class StreamResource
         }
 
         return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
+    // TODO [kog@epiphanic.org - 6/2/15]: This could be async.
+
+    /**
+     * Attempts to delete a stream by ID. If the stream is unknown, does nothing.
+     *
+     * @param id The ID of the stream to delete.
+     *
+     * @return 202/ACCEPTED unless an exception is thrown,
+     *         403/FORBIDDEN if the ID is invalid.
+     */
+    @Path("/{id}")
+    @DELETE
+    public Response deleteStream(final @PathParam("id") String id) throws Exception
+    {
+        validateId(id);
+        getStreamService().deleteStream(id);
+
+        return Response.status(Response.Status.ACCEPTED).build();
     }
 
     // TODO [kog@epiphanic.org - 5/28/15]: Move this to a @Constraint.

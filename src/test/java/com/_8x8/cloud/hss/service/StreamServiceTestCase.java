@@ -212,6 +212,49 @@ public class StreamServiceTestCase
         verifyNoMoreCollaboratingInteractions();
     }
 
+    /**
+     * Tests {@link StreamService#deleteStream(String)} for the happy path.
+     */
+    @Test
+    public void testDeleteStream() throws Exception
+    {
+        // Pretend we've got the file on hand.
+        doReturn(StreamStatus.SUCCESSFUL).when(_streamService).getStatusForStreamById(anyString());
+
+        _streamService.deleteStream("asdf");
+
+        verify(_streamService).deleteStream("asdf");
+        verify(_streamService).getStatusForStreamById("asdf");
+        verify(_streamService).createFileForId("asdf");
+        verify(_streamService).getStreamStorageDirectory();
+
+        verifyStatic(times(1));
+        FileUtils.forceDelete(any(File.class));
+
+        verifyNoMoreCollaboratingInteractions();
+    }
+
+    /**
+     * Tests {@link StreamService#deleteStream(String)} for the case where the stream ID is not known to the
+     * system. This should result in a no-op.
+     */
+    @Test
+    public void testDeleteStreamForUnknownId() throws Exception
+    {
+        // This file, however, we do not know.
+        doReturn(StreamStatus.NOT_FOUND).when(_streamService).getStatusForStreamById(anyString());
+
+        _streamService.deleteStream("asdf");
+
+        verify(_streamService).deleteStream("asdf");
+        verify(_streamService).getStatusForStreamById("asdf");
+
+        verifyStatic(times(0));
+        FileUtils.forceDelete(any(File.class));
+
+        verifyNoMoreCollaboratingInteractions();
+    }
+
     private void verifyNoMoreCollaboratingInteractions()
     {
         verifyNoMoreInteractions(_streamService, _filterManager);

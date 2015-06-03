@@ -50,4 +50,13 @@ public interface IStreamService
      * @throws Exception If we fail to return the stream for the given ID. This must be handled up the call stack.
      */
     void saveStream(String id, InputStream stream, List<String> filters) throws Exception;
+
+    /**
+     * Attempts to delete a stream by ID. If the ID is not known, this results in a no-op.
+     *
+     * @param id The ID of the stream to delete. Must not be blank, must be valid. Should exist.
+     *
+     * @throws Exception If deletion fails for a given reason. This must be handled up the call stack.
+     */
+    void deleteStream(String id) throws Exception;
 }

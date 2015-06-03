@@ -10,6 +10,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 
+// TODO [kog@epiphanic.org - 6/2/15]: There are some race conditions with regards to the various stream statuses. Should probably
+// TODO [kog@epiphanic.org - 6/2/15]: come in here and address that...
+
 /**
  * Provides a concrete implementation of {@link IStreamService}.<p/>
  *
@@ -88,6 +91,8 @@ public class StreamService implements IStreamService
         }
     }
 
+    // TODO [kog@epiphanic.org - 6/2/15]: Need to add checking of stream state for in progress.
+
     @Override
     public InputStream getStreamById(final String id, final List<String> filters) throws Exception
     {
@@ -118,6 +123,17 @@ public class StreamService implements IStreamService
         try (final OutputStream outputStream = getFilterManager().prepareOutputFilters(FileUtils.openOutputStream(createFileForId(id)), filters))
         {
             IOUtils.copyLarge(stream, outputStream);
+        }
+    }
+
+    // TODO [kog@epiphanic.org - 6/2/15]: Need to add checking of stream state for in progress.
+
+    @Override
+    public void deleteStream(final String id) throws Exception
+    {
+        if (StreamStatus.SUCCESSFUL.equals(getStatusForStreamById(id)))
+        {
+            FileUtils.forceDelete(createFileForId(id));
         }
     }
 

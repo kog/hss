@@ -485,5 +485,26 @@ public class StreamResourceITCase
 
         // Clean up after ourselves. Hopefully.
         FileUtils.deleteQuietly(file);
-    } 
+    }
+
+    /**
+     * Tests {@link StreamResource#deleteStream(String)} to make sure it actually does what it should. In this case
+     * it should delete the file, then return a 202/ACCEPTED.
+     */
+    @Test
+    public void testDeleteStream() throws Exception
+    {
+        // Write our file out to the filesystem so we can delete it.
+        final File file = new File(_storageDirectory, _uuid);
+        FileUtils.write(file, _testPayload);
+
+        // So... this should already be here.
+        final Response response = _client.path(_uuid).request().delete();
+
+        // We should get a 202/ACCEPTED.
+        Assert.assertThat(202, is(equalTo(response.getStatus())));
+
+        // And the file should no longer exist.
+        Assert.assertThat(file.exists(), is(false));
+    }
 }

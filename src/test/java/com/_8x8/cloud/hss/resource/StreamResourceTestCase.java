@@ -367,6 +367,52 @@ public class StreamResourceTestCase
     }
 
     /**
+     * Tests {@link StreamResource#deleteStream(String)} for the happy path. This should return a 202/ACEPTED.
+     */
+    @Test
+    public void testDeleteStream() throws Exception
+    {
+        final Response response = _resource.deleteStream("asdf");
+
+        verify(_resource).deleteStream("asdf");
+        verify(_resource).validateId("asdf");
+        verify(_resource).getStreamService();
+
+        verify(_streamService).deleteStream("asdf");
+
+        verifyNoMoreCollaborations();
+
+        // Make sure we got back a 202/ACCEPTED.
+        Assert.assertThat(response.getStatus(), is(equalTo(Response.Status.ACCEPTED.getStatusCode())));
+    }
+
+    /**
+     * Tests {@link StreamResource#deleteStream(String)} for the case where the ID is invalid. This should return a
+     * 403/FORBIDDEN.
+     */
+    @Test
+    public void testDeleteStreamForInvalidId() throws Exception
+    {
+        doCallRealMethod().when(_resource).validateId(anyString());
+
+        try
+        {
+            _resource.deleteStream("inv@lidp@th");
+            Assert.fail("Whoops, we should have caught an exception here...");
+        }
+        catch (final WebApplicationException ex)
+        {
+            // We should get back that 403/FORBIDDEN.
+            Assert.assertThat(ex.getResponse().getStatus(), is(equalTo(Response.Status.FORBIDDEN.getStatusCode())));
+        }
+
+        verify(_resource).deleteStream(anyString());
+        verify(_resource).validateId(anyString());
+
+        verifyNoMoreCollaborations();
+    }
+
+    /**
      * Because we're throwing a WebApplicationException for now, this is a little wonky... wrap our assertions into
      * a convenience method for easy running.
      *
