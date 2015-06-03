@@ -22,7 +22,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.regex.Pattern;
 
-// TODO [kog@epiphanic.org - 5/28/15]: Clean up stream handling when filters are in place.
+// TODO [kog@epiphanic.org - 6/2/15]: State tracking, race conditions.
 
 /**
  * Provides a resource for dealing with the "streams" - the middle S in HSS. You must not cross them.<p/>
@@ -196,7 +196,7 @@ public class StreamResource
     {
         if (!VALID_ID_PATTERN.matcher(id).matches())
         {
-            throw new WebApplicationException(403);
+            throw new WebApplicationException(Response.Status.FORBIDDEN);
         }
     }
 }
