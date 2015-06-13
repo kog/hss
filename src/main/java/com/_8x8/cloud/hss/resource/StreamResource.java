@@ -141,6 +141,7 @@ public class StreamResource
         if (null != file)
         {
             // It may seem strange to return a naked stream, but the MessageBodyWriter (InputStreamProvider) will call close on this.
+            // Note that any exceptions with the filters are caught at a lower level, and those streams are closed accordingly.
             return Response.ok(file).build();
         }
 

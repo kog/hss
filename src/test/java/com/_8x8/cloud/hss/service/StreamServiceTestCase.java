@@ -30,6 +30,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -100,7 +101,7 @@ public class StreamServiceTestCase
         final String path = String.format("/tmp/%s", UUID.randomUUID().toString());
         _streamService.setStreamStorageDirectory(path);
 
-        Assert.assertThat(_streamService.createFileForId("id").getAbsolutePath(), is(equalTo(path + "/id")));
+        Assert.assertThat(_streamService.createFileForId("id").getAbsolutePath(), is(equalTo(new File(path + "/id").getAbsolutePath())));
 
         verify(_streamService).setStreamStorageDirectory(anyString());
         verify(_streamService).createFileForId(anyString());
@@ -148,6 +149,51 @@ public class StreamServiceTestCase
         verify(_streamService).getStreamById(anyString(), anyListOf(String.class));
         verify(_streamService).getStatusForStreamById("test");
 
+        verifyNoMoreCollaboratingInteractions();
+    }
+
+    /**
+     * Tests {@link StreamService#getStatusForStreamById(String)} for the case where an exception is thrown. This would be
+     * something like an invalid filter combination being selected. We want to make sure we're closing our streams, since
+     * the MessageBodyWriter will never actually be called.
+     **/
+    @Test
+    public void testGetStreamIdThrowsException() throws Exception
+    {
+        // Wire up some stuff we'll need.
+        doReturn(StreamStatus.SUCCESSFUL).when(_streamService).getStatusForStreamById(anyString());
+        doReturn(new File("asdf")).when(_streamService).createFileForId(anyString());
+
+        // Bail when we're trying to get our filters.
+        doThrow(new RuntimeException("moo")).when(_streamService).getFilterManager();
+
+        try
+        {
+            _streamService.getStreamById("test", Arrays.asList("foo", "bar"));
+            Assert.fail("Whoops, we should have caught an exception here.");
+        }
+        catch (final RuntimeException ex)
+        {
+            Assert.assertThat("moo", is(ex.getMessage()));
+        }
+
+        // We're still going to call our service calls.
+        verify(_streamService).getStreamById(anyString(), anyListOf(String.class));
+        verify(_streamService).getStatusForStreamById("test");
+        verify(_streamService).createFileForId("test");
+        verify(_streamService).getFilterManager();
+
+        // But no filters.
+        verify(_filterManager, times(0)).prepareInputFilters(any(InputStream.class), anyListOf(String.class));
+
+        // We're going to hit both of these.
+        verifyStatic(times(1));
+        FileUtils.openInputStream(any(File.class));
+
+        verifyStatic(times(1));
+        IOUtils.closeQuietly(any(InputStream.class));
+
+        // And that should be it.
         verifyNoMoreCollaboratingInteractions();
     }
 

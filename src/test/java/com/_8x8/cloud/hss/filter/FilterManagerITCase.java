@@ -52,7 +52,7 @@ public class FilterManagerITCase
 
         // Test payload.
         final List<String> testPayload = Arrays.asList("hello world", "for serious");
-        final File file = new File("/tmp/" + uuid);
+        final File file = new File("/tmp/hss/" + uuid);
 
         // We're going to use all three filters, in this order.
         final List<String> filters = Arrays.asList("zip", "encrypt", "base64");
@@ -79,7 +79,10 @@ public class FilterManagerITCase
         verify(baseInputStream).close();
 
         // Make sure that we didn't just write a plain-text file to disk...
-        Assert.assertThat(testPayload, is(not(equalTo(IOUtils.readLines(new FileInputStream(file))))));
+        try (final InputStream stream = new FileInputStream(file))
+        {
+            Assert.assertThat(testPayload, is(not(equalTo(IOUtils.readLines(stream)))));
+        }
 
         FileUtils.forceDelete(file);
     }
@@ -96,7 +99,7 @@ public class FilterManagerITCase
 
         // Test payload.
         final List<String> testPayload = Arrays.asList("A much", "different payload");
-        final File file = new File("/tmp/" + uuid);
+        final File file = new File("/tmp/hss/" + uuid);
 
         // Write the file, as we would from anywhere else.
         final OutputStream baseOutputStream = spy(new FileOutputStream(file));
@@ -120,7 +123,10 @@ public class FilterManagerITCase
         verify(baseInputStream).close();
 
         // And just to prove no filters were used...
-        Assert.assertThat(testPayload, is(equalTo(IOUtils.readLines(new FileInputStream(file)))));
+        try(final InputStream stream = new FileInputStream(file))
+        {
+            Assert.assertThat(testPayload, is(equalTo(IOUtils.readLines(stream))));
+        }
 
         FileUtils.forceDelete(file);
     }

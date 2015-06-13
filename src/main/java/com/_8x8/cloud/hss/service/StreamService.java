@@ -102,7 +102,22 @@ public class StreamService implements IStreamService
     {
         if (getStatusForStreamById(id) != StreamStatus.NOT_FOUND)
         {
-            return getFilterManager().prepareInputFilters(FileUtils.openInputStream(createFileForId(id)), filters);
+            InputStream stream = null;
+
+            try
+            {
+                stream = FileUtils.openInputStream(createFileForId(id));
+                return getFilterManager().prepareInputFilters(stream, filters);
+            }
+            catch(final Exception ex)
+            {
+                // If we fail to apply filters, we're going to need to clean up after ourselves. If we put this in a try-with-resources
+                // we will instead close the stream before we return up the call stack.
+                IOUtils.closeQuietly(stream);
+
+                // We're not doing much with exceptions though, so throw this back up the stack.
+                throw ex;
+            }
         }
 
         return null;
@@ -124,9 +139,10 @@ public class StreamService implements IStreamService
     @Override
     public void saveStream(final String id, final InputStream stream, final List<String> filters) throws Exception
     {
-        try (final OutputStream outputStream = getFilterManager().prepareOutputFilters(FileUtils.openOutputStream(createFileForId(id)), filters))
+        try (final OutputStream outputStream = FileUtils.openOutputStream(createFileForId(id));
+             final OutputStream filteredOutputStream = getFilterManager().prepareOutputFilters(outputStream, filters))
         {
-            IOUtils.copyLarge(stream, outputStream);
+            IOUtils.copyLarge(stream, filteredOutputStream);
         }
     }
 

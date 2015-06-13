@@ -6,7 +6,7 @@ import com._8x8.cloud.hss.model.StreamStatus;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.glassfish.jersey.internal.util.Base64;
+import org.apache.commons.codec.binary.Base64;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.zip.GZIPInputStream;
 
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.not;
@@ -99,7 +100,7 @@ public class StreamResourceITCase
         Assert.assertThat(response.readEntity(String.class), is(equalTo(_testPayload)));
 
         // Clean up after ourselves. Hopefully.
-        FileUtils.deleteQuietly(file);
+        FileUtils.forceDelete(file);
     }
 
     /**
@@ -160,7 +161,7 @@ public class StreamResourceITCase
         Assert.assertThat(getResponse.readEntity(String.class), is(equalTo(_testPayload)));
 
         // Clean up after ourselves. Hopefully.
-        FileUtils.deleteQuietly(file);
+        FileUtils.forceDelete(file);
     }
 
     /**
@@ -183,7 +184,7 @@ public class StreamResourceITCase
         Assert.assertThat(response.getLocation(), is(nullValue()));
 
         // Clean up after ourselves. Hopefully.
-        FileUtils.deleteQuietly(file);
+        FileUtils.forceDelete(file);
     }
 
     /**
@@ -237,7 +238,7 @@ public class StreamResourceITCase
         Assert.assertThat(updatedPayload, is(equalTo(FileUtils.readFileToString(file))));
 
         // Clean up after ourselves. Hopefully.
-        FileUtils.deleteQuietly(file);
+        FileUtils.forceDelete(file);
     }
 
     /**
@@ -311,7 +312,7 @@ public class StreamResourceITCase
         Assert.assertThat(DigestUtils.md5Hex(getResponse.readEntity(InputStream.class)), is(equalTo(imageMD5)));
 
         // Clean up after ourselves. Hopefully.
-        FileUtils.deleteQuietly( new File(_storageDirectory, _uuid));
+        FileUtils.forceDelete(new File(_storageDirectory, _uuid));
     }
 
     /**
@@ -327,9 +328,9 @@ public class StreamResourceITCase
         // Let's post that bad boy as app/octet-stream.
         final InputStream fauxFile = IOUtils.toInputStream(_testPayload);
         final Response response = _client.path(String.format("/%s", _uuid))
-                .queryParam("filters", "zip", "encrypt", "base64")
-                .request()
-                .post(Entity.entity(fauxFile, MediaType.APPLICATION_OCTET_STREAM_TYPE));
+                                         .queryParam("filters", "zip", "encrypt", "base64")
+                                         .request()
+                                         .post(Entity.entity(fauxFile, MediaType.APPLICATION_OCTET_STREAM_TYPE));
 
         // We should get back a 201/CREATED with a Location header to /(uuid).
         final String location = response.getLocation().toASCIIString();
@@ -340,8 +341,8 @@ public class StreamResourceITCase
         final WebTarget newClient = ClientBuilder.newClient().target(location);
 
         final Response getResponse = newClient.queryParam("filters", "zip", "encrypt", "base64")
-                .request("application/octet-stream")
-                .get();
+                                              .request("application/octet-stream")
+                                              .get();
 
         // We should get a 200/OK with what we wrote to the filesystem earlier.
         Assert.assertThat(200, is(equalTo(getResponse.getStatus())));
@@ -351,7 +352,7 @@ public class StreamResourceITCase
         Assert.assertThat(FileUtils.readFileToString(file), is(not(equalTo(_testPayload))));
 
         // Clean up after ourselves. Hopefully.
-        FileUtils.deleteQuietly(file);
+        FileUtils.forceDelete(file);
     }
 
     // TODO [kog@epiphanic.org - 6/2/15]: Should probably come in with an ExceptionMapper here.
@@ -370,9 +371,9 @@ public class StreamResourceITCase
         // Let's post that bad boy as app/octet-stream.
         final InputStream fauxFile = IOUtils.toInputStream(_testPayload);
         final Response response = _client.path(String.format("/%s", _uuid))
-                .queryParam("filters", "base64")
-                .request()
-                .post(Entity.entity(fauxFile, MediaType.APPLICATION_OCTET_STREAM_TYPE));
+                                         .queryParam("filters", "base64")
+                                         .request()
+                                         .post(Entity.entity(fauxFile, MediaType.APPLICATION_OCTET_STREAM_TYPE));
 
         // We should get back a 201/CREATED with a Location header to /(uuid).
         final String location = response.getLocation().toASCIIString();
@@ -390,10 +391,10 @@ public class StreamResourceITCase
         Assert.assertThat(500, is(equalTo(getResponse.getStatus())));
 
         // Demonstrate that all we've done is Base64 encoded our value.
-        Assert.assertThat(FileUtils.readFileToString(file).trim(), is((equalTo(Base64.encodeAsString(_testPayload)))));
+        Assert.assertThat(FileUtils.readFileToString(file).trim(), is((equalTo(Base64.encodeBase64String(_testPayload.getBytes())))));
 
         // Clean up after ourselves. Hopefully.
-        FileUtils.deleteQuietly(file);
+        FileUtils.forceDelete(file);
     }
 
     /**
@@ -434,7 +435,7 @@ public class StreamResourceITCase
         Assert.assertThat(FileUtils.readFileToString(file), is(equalTo(_testPayload)));
 
         // Clean up after ourselves. Hopefully.
-        FileUtils.deleteQuietly(file);
+        FileUtils.forceDelete(file);
     }
     
     /**
@@ -487,7 +488,7 @@ public class StreamResourceITCase
         }
 
         // Clean up after ourselves. Hopefully.
-        FileUtils.deleteQuietly(file);
+        FileUtils.forceDelete(file);
     }
 
     /**
@@ -518,10 +519,10 @@ public class StreamResourceITCase
     public void testGetStreamMetadata() throws Exception
     {
         // Put some files on the filesystem.
-        final File firstFile = new File(_storageDirectory, _uuid);
+        final File firstFile = new File(_storageDirectory, "a"+_uuid);
         FileUtils.write(firstFile, _testPayload);
 
-        final File secondFile = new File(_storageDirectory, UUID.randomUUID().toString());
+        final File secondFile = new File(_storageDirectory, "z"+UUID.randomUUID().toString());
         FileUtils.write(secondFile, "Totally awesomelyrandompayloaddddd " + secondFile.getName());
 
         // Go grab the statuses.
@@ -533,6 +534,9 @@ public class StreamResourceITCase
 
         // Make sure we have the right number of items.
         Assert.assertThat(2, is(equalTo(metadataCollection.getMetadata().size())));
+
+        // Sort them for reproducible ordering
+        metadataCollection.setMetadata(metadataCollection.getMetadata().stream().sorted((lhs, rhs) -> lhs.getId().compareTo(rhs.getId())).collect(toList()));
 
         // Make sure the metadata matches the file.
         assertMetadataMatchesFile(firstFile, metadataCollection.getMetadata().get(0));
