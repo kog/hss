@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc.xsd">
 
     <!-- TODO [kog@epiphanic.org - 5/30/15]: Property resolver -->
     <bean id="storageDirectory" class="java.lang.String">
@@ -18,4 +20,15 @@
     </bean>
 
     <bean class="com._8x8.cloud.hss.filter.FilterManager" id="filterManager" init-method="init"/>
+
+    <bean class="com._8x8.cloud.hss.persistence.StreamStateDao" id="streamStateDao">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- We're going to use HSQL as our embedded DB as SQLite has concurrency issues, and JavaDB lacks upsert support...
+         There's a temporary schema in here, along with data for testing. Usually the latter would be test scoped.
+         You would also usually use something like JNDI.-->
+    <jdbc:embedded-database id="dataSource" type="HSQL">
+        <jdbc:script location="classpath:schema.sql"/>
+    </jdbc:embedded-database>
 </beans>

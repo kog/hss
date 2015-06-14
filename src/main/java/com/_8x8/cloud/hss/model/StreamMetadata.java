@@ -5,8 +5,6 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
-// TODO [kog@epiphanic.org - 6/2/15]: Add in a pre-computed MD5 hash if we start to persist state information (DB, FS).
-
 /**
  * Provides a model encapsulating information about a given stream.<p/>
  *
@@ -22,8 +20,10 @@ import javax.xml.bind.annotation.XmlType;
         "status",
         "fileSize",
         "lastModified",
+        "createdTime"
 })
 public class StreamMetadata
+
 {
     /**
      * Holds the ID of the stream.
@@ -36,9 +36,15 @@ public class StreamMetadata
     private StreamStatus _status;
 
     /**
-     * Holds the size of the particular file.
+     * Holds the size of the particular file. Please note that this is the size of the file after filters have been
+     * applied, and not the original size.
      */
     private Long _fileSize;
+
+    /**
+     * Holds the time at which the file was first seen.
+     */
+    private Long _createdTime;
 
     /**
      * Holds the time at which the file was last modified.
@@ -56,4 +62,7 @@ public class StreamMetadata
 
     public Long getLastModified() { return _lastModifiedTime; }
     public void setLastModified(final Long lastModifiedDate) { _lastModifiedTime = lastModifiedDate; }
+
+    public Long getCreatedTime() { return _createdTime; }
+    public void setCreatedTime(final Long createdTime) { _createdTime = createdTime; }
 }
