@@ -39,6 +39,17 @@ public class StreamStateDao extends NamedParameterJdbcDaoSupport implements IStr
     // TODO [kog@epiphanic.org - 6/11/15]: queries -> property files
 
     @Override
+    public StreamMetadata createStreamMetadata(final String streamId, final StreamStatus status)
+    {
+        final StreamMetadata metadata = new StreamMetadata();
+
+        metadata.setId(streamId);
+        metadata.setStatus(null == status ? StreamStatus.IN_PROGRESS : status);
+
+        return metadata;
+    }
+
+    @Override
     public List<StreamMetadata> findStreamMetadata() throws Exception
     {
         return getNamedParameterJdbcTemplate().query("SELECT * FROM STREAM_STATUS", new StreamMetadataMapper());
@@ -58,7 +69,8 @@ public class StreamStateDao extends NamedParameterJdbcDaoSupport implements IStr
             return metadata.get(0);
         }
 
-        return null;
+        // If we've never seen this, return a new record denoting we have no idea what it is.
+        return createStreamMetadata(streamId, StreamStatus.NOT_FOUND);
     }
 
     @Override

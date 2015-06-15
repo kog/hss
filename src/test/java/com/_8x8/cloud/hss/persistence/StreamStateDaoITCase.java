@@ -23,7 +23,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 
 /**
  * Tests the {@link StreamStateDao} at the integration level.
@@ -55,6 +54,10 @@ public class StreamStateDaoITCase
 
         _objectMapper = new ObjectMapper();
         _objectMapper.setAnnotationIntrospectors(pair, pair);
+
+        // Make sure we've got some test data on hand.
+        _streamStateDao.saveOrUpdateStreamMetadata(createMetadata("BusyFile", StreamStatus.IN_PROGRESS, 1024, System.currentTimeMillis(), System.currentTimeMillis()));
+        _streamStateDao.saveOrUpdateStreamMetadata(createMetadata("DoneFile", StreamStatus.SUCCESSFUL, 2048, System.currentTimeMillis(), System.currentTimeMillis()));
     }
 
     /**
@@ -82,7 +85,8 @@ public class StreamStateDaoITCase
     @Test
     public void testFindStreamMetadataForUnknownStreamId() throws Exception
     {
-        Assert.assertThat(_streamStateDao.findStreamMetadataById(UUID.randomUUID().toString()), is(nullValue()));
+        final String uuid = UUID.randomUUID().toString();
+        assertMetadataUnknown(_streamStateDao.findStreamMetadataById(uuid), uuid);
     }
 
     /**
@@ -94,7 +98,7 @@ public class StreamStateDaoITCase
         final String uuid = UUID.randomUUID().toString();
 
         // We should have nothing here for this UUID right now.
-        Assert.assertThat(_streamStateDao.findStreamMetadataById(uuid), is(nullValue()));
+        assertMetadataUnknown(_streamStateDao.findStreamMetadataById(uuid), uuid);
 
         // Now make something.
         final StreamMetadata metadata = createMetadata(uuid, StreamStatus.SUCCESSFUL, 8675309L, System.currentTimeMillis(), System.currentTimeMillis());
@@ -116,7 +120,7 @@ public class StreamStateDaoITCase
         final String uuid = UUID.randomUUID().toString();
 
         // We should have nothing here for this UUID right now.
-        Assert.assertThat(_streamStateDao.findStreamMetadataById(uuid), is(nullValue()));
+        assertMetadataUnknown(_streamStateDao.findStreamMetadataById(uuid), uuid);
 
         // Now make something.
         final StreamMetadata metadata = createMetadata(uuid, StreamStatus.SUCCESSFUL, 8675309L, System.currentTimeMillis(), System.currentTimeMillis());
@@ -173,7 +177,7 @@ public class StreamStateDaoITCase
         _streamStateDao.deleteStreamMetadataById(uuid);
 
         // Make sure we're not pulling anything back.
-        Assert.assertThat(_streamStateDao.findStreamMetadataById(uuid), is(nullValue()));
+        assertMetadataUnknown(_streamStateDao.findStreamMetadataById(uuid), uuid);
     }
 
     /**
@@ -186,9 +190,9 @@ public class StreamStateDaoITCase
         final String uuid = UUID.randomUUID().toString();
 
         // Nothing here before, or after.
-        Assert.assertThat(_streamStateDao.findStreamMetadataById(uuid), is(nullValue()));
+        assertMetadataUnknown(_streamStateDao.findStreamMetadataById(uuid), uuid);
         _streamStateDao.deleteStreamMetadataById(uuid);
-        Assert.assertThat(_streamStateDao.findStreamMetadataById(uuid), is(nullValue()));
+        assertMetadataUnknown(_streamStateDao.findStreamMetadataById(uuid), uuid);
     }
 
     /**
@@ -211,11 +215,11 @@ public class StreamStateDaoITCase
         Assert.assertThat(System.currentTimeMillis() - metadata.get(1).getLastModified(), is(lessThan(1000L)));
 
         // Then wipe them down...
-        metadata.get(0).setCreatedTime(null);
-        metadata.get(0).setLastModified(null);
+        metadata.get(0).setCreatedTime(0);
+        metadata.get(0).setLastModified(0);
 
-        metadata.get(1).setCreatedTime(null);
-        metadata.get(1).setLastModified(null);
+        metadata.get(1).setCreatedTime(0);
+        metadata.get(1).setLastModified(0);
 
         // Then check them against a known value.
         final String knownGoodData = IOUtils.toString(getClass().getResourceAsStream("/findStreamMetadataPayload.json"));
@@ -284,5 +288,21 @@ public class StreamStateDaoITCase
         Assert.assertThat(metadata.getFileSize(), is(persistedMetadata.getFileSize()));
         Assert.assertThat(System.currentTimeMillis() - persistedMetadata.getLastModified(), lessThan(1000L));
         Assert.assertThat(System.currentTimeMillis() - persistedMetadata.getCreatedTime(), lessThan(1000L));
+    }
+
+    /**
+     * Provides a convenience method to assert that this stream is unknown.
+     *
+     * @param metadata {@link StreamMetadata} to verify. Must not be null.
+     * @param id The ID we expect for the stream. Must not be null, must be a valid ID.
+     */
+    private void assertMetadataUnknown(final StreamMetadata metadata, final String id)
+    {
+        Assert.assertThat(metadata.getId(), is(id));
+        Assert.assertThat(metadata.getStatus(), is(StreamStatus.NOT_FOUND));
+
+        Assert.assertThat(metadata.getFileSize(), is(0L));
+        Assert.assertThat(metadata.getLastModified(), is(0L));
+        Assert.assertThat(metadata.getCreatedTime(), is(0L));
     }
 }

@@ -13,10 +13,16 @@
     <bean class="com._8x8.cloud.hss.resource.StreamResource" id="streamResource">
         <property name="streamService" ref="streamService"/>
     </bean>
+    
+    <bean class="com._8x8.cloud.hss.resource.TestingResource" id="testingResource">
+        <property name="streamStateDao" ref="streamStateDao"/>
+        <property name="streamService" ref="streamService"/>
+    </bean>
 
     <bean class="com._8x8.cloud.hss.service.StreamService" id="streamService" init-method="init">
         <property name="streamStorageDirectory" ref="storageDirectory"/>
         <property name="filterManager" ref="filterManager"/>
+        <property name="streamStateDao" ref="streamStateDao"/>
     </bean>
 
     <bean class="com._8x8.cloud.hss.filter.FilterManager" id="filterManager" init-method="init"/>

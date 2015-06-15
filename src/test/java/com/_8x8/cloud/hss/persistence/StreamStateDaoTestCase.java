@@ -15,7 +15,6 @@ import java.util.Collections;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -58,6 +57,43 @@ public class StreamStateDaoTestCase
         doReturn(_namedParameterJdbcTemplate).when(_streamStateDao).getNamedParameterJdbcTemplate();
 
         _resultSet = mock(ResultSet.class);
+    }
+
+    /**
+     * Tests {@link StreamStateDao#createStreamMetadata(String, StreamStatus)} to make sure it does what we expect.
+     **/
+    @Test
+    public void testCreateStreamMetadata() throws Exception
+    {
+        final StreamMetadata metadata = _streamStateDao.createStreamMetadata("foo", StreamStatus.SUCCESSFUL);
+
+        // These should be filled in.
+        Assert.assertThat(metadata.getId(), is("foo"));
+        Assert.assertThat(metadata.getStatus(), is(StreamStatus.SUCCESSFUL));
+
+        // But nothing else...
+        Assert.assertThat(metadata.getFileSize(), is(0L));
+        Assert.assertThat(metadata.getLastModified(), is(0L));
+        Assert.assertThat(metadata.getCreatedTime(), is(0L));
+    }
+
+    /**
+     * Tests {@link StreamStateDao#createStreamMetadata(String, StreamStatus)} for the case where no state is passed in.
+     * This should default to {@link StreamStatus#IN_PROGRESS}.
+     **/
+    @Test
+    public void testCreateStreamMetadataWithNoStatus() throws Exception
+    {
+        final StreamMetadata metadata = _streamStateDao.createStreamMetadata("foo", null);
+
+        // These should be filled in.
+        Assert.assertThat(metadata.getId(), is("foo"));
+        Assert.assertThat(metadata.getStatus(), is(StreamStatus.IN_PROGRESS));
+
+        // But nothing else...
+        Assert.assertThat(metadata.getFileSize(), is(0L));
+        Assert.assertThat(metadata.getLastModified(), is(0L));
+        Assert.assertThat(metadata.getCreatedTime(), is(0L));
     }
 
     /**
@@ -116,11 +152,16 @@ public class StreamStateDaoTestCase
     @Test
     public void testFindStreamMetadataByIdForNoResult() throws Exception
     {
-        Assert.assertThat(_streamStateDao.findStreamMetadataById("foo"), is(nullValue()));
+        // We should get back metadata telling us the stream is unknown.
+        final StreamMetadata metadata = _streamStateDao.findStreamMetadataById("foo");
+
+        Assert.assertThat(metadata.getId(), is("foo"));
+        Assert.assertThat(metadata.getStatus(), is(StreamStatus.NOT_FOUND));
 
         verify(_streamStateDao).findStreamMetadataById(anyString());
         verify(_streamStateDao).getNamedParameterJdbcTemplate();
         verify(_streamStateDao).createParameters(anyString());
+        verify(_streamStateDao).createStreamMetadata("foo", StreamStatus.NOT_FOUND);
 
         verify(_namedParameterJdbcTemplate).query(any(String.class), any(SqlParameterSource.class), any(StreamStateDao.StreamMetadataMapper.class));
 

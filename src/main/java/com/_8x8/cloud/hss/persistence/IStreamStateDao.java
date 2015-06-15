@@ -1,6 +1,7 @@
 package com._8x8.cloud.hss.persistence;
 
 import com._8x8.cloud.hss.model.StreamMetadata;
+import com._8x8.cloud.hss.model.StreamStatus;
 
 import java.util.List;
 
@@ -12,6 +13,22 @@ import java.util.List;
  */
 public interface IStreamStateDao
 {
+    /**
+     * Provides a simple creation mechanism to create {@link StreamMetadata} for a given stream ID. Please note that
+     * as the streams themselves are quite heavy, we tend to pass around the corresponding metadata. In this case the
+     * metadata encodes whether or not the object exists - a normally unRESTful practice. But then, you don't generally
+     * haul around large blobs of data...<p/>
+     *
+     * Please note that if a {@link StreamStatus} is not provided, we will default to {@link StreamStatus#IN_PROGRESS}
+     * as this is the default behavior of <b>creating</b> a stream.
+     *
+     * @param streamId The ID of the stream to find {@link StreamMetadata} for. Must be valid.
+     * @param status The {@link StreamStatus} to set for the {@link StreamMetadata}. If null, will default to {@link StreamStatus#IN_PROGRESS}.
+     *
+     * @return A non-null, valid {@link StreamMetadata} with the given ID and status.
+     */
+    StreamMetadata createStreamMetadata(String streamId, StreamStatus status);
+
     /**
      * Attempts to find the {@link StreamMetadata} associated with all streams known to the system.
      *
@@ -25,7 +42,8 @@ public interface IStreamStateDao
      *
      * @param streamId The ID of the stream to find {@link StreamMetadata} for. Must be valid.
      *
-     * @return Any known {@link StreamMetadata} for the ID, if known, otherwise <code>null</code>.
+     * @return {@link StreamMetadata} regarding the stream. Will never be null, but may indicate the stream is unknown,
+     * as well as omitting some data points.
      */
     StreamMetadata findStreamMetadataById(String streamId) throws Exception;
 

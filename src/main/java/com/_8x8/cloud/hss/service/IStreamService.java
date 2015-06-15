@@ -20,12 +20,14 @@ public interface IStreamService
     /**
      * Obtains an {@link InputStream} to a given stream object, by ID.<p/>
      *
-     * Please note that callers are responsible for closing the returned {@link InputStream}.
+     * Please note that callers are responsible for closing the returned {@link InputStream}. Though, the stream may
+     * be closed if any exceptions are caught during IO operations.
      *
      * @param id The ID of the stream to fetch. Must not be blank, must be valid.
      * @param filters A list of zero or more filters to apply to the stream. May be empty, but must not be null.
      *
-     * @return An {@link InputStream} pointing to the resource, if known, else null.
+     * @return An {@link InputStream} pointing to the resource, if known, else <code>null</code>. If the stream is known,
+     * but in {@link StreamStatus#IN_PROGRESS}, will also be <code>null.</code>
      *
      * @throws Exception If we fail to return the stream for the given ID. This must be handled up the call stack.
      */
@@ -38,7 +40,7 @@ public interface IStreamService
      *
      * @return A {@link StreamStatus} representing what the system knows of the given entity. Will not be null.
      */
-    StreamStatus getStatusForStreamById(String id);
+    StreamStatus getStatusForStreamById(String id) throws Exception;
 
     /**
      * Attempts to persist the given stream to a backing store.</p>

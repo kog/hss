@@ -1,1 +1,1 @@
-[{"id":"BusyFile","status":"IN_PROGRESS","fileSize":1024,"lastModified":null,"createdTime":null},{"id":"DoneFile","status":"SUCCESSFUL","fileSize":2048,"lastModified":null,"createdTime":null}]
+[{"id":"BusyFile","status":"IN_PROGRESS","fileSize":1024,"lastModified":0,"createdTime":0},{"id":"DoneFile","status":"SUCCESSFUL","fileSize":2048,"lastModified":0,"createdTime":0}]

@@ -24,8 +24,6 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.regex.Pattern;
 
-// TODO [kog@epiphanic.org - 6/2/15]: State tracking, race conditions.
-
 /**
  * Provides a resource for dealing with the "streams" - the middle S in HSS. You must not cross them.<p/>
  *
@@ -127,7 +125,8 @@ public class StreamResource
      *
      * @return 200/OK with the stream if known,
      *         403/FORBIDDEN if the ID is invalid,
-     *         404/NOT FOUND if the id is valid but unknown.
+     *         404/NOT FOUND if the ID is valid but unknown
+     *         409/CONFLICT if the ID is known, but {@link StreamStatus#IN_PROGRESS} or {@link StreamStatus#FAILED}.
      */
     @Path("/{id}")
     @GET
@@ -136,13 +135,20 @@ public class StreamResource
     {
         validateId(id);
 
-        final InputStream file = getStreamService().getStreamById(id, filters);
+        // Make sure that this is neither currently in use, nor failed.
+        final StreamStatus status = getStreamService().getStatusForStreamById(id);
 
-        if (null != file)
+        if (StreamStatus.IN_PROGRESS.equals(status) || StreamStatus.FAILED.equals(status))
+        {
+            return Response.status(Response.Status.CONFLICT).build();
+        }
+
+        // If we've got it, return it.
+        if (StreamStatus.SUCCESSFUL.equals(status))
         {
             // It may seem strange to return a naked stream, but the MessageBodyWriter (InputStreamProvider) will call close on this.
             // Note that any exceptions with the filters are caught at a lower level, and those streams are closed accordingly.
-            return Response.ok(file).build();
+            return Response.ok(getStreamService().getStreamById(id, filters)).build();
         }
 
         return Response.status(Response.Status.NOT_FOUND).build();
@@ -195,7 +201,8 @@ public class StreamResource
      *
      * @return 204/NO CONTENT if the update was successful,
      *         403/FORBIDDEN if the ID is invalid,
-     *         404/NOT FOUND if the ID is valid but not known.
+     *         404/NOT FOUND if the ID is valid but not known,
+     *         409/CONFLICT if the ID is known, but the stream is in a state such that it cannot be updated.
      */
     @Path("/{id}")
     @PUT
@@ -206,11 +213,21 @@ public class StreamResource
         {
             validateId(id);
 
-            if (StreamStatus.NOT_FOUND.equals(getStreamService().getStatusForStreamById(id)))
+            final StreamStatus status = getStreamService().getStatusForStreamById(id);
+
+            // If this stream is unknown, we can't update it.
+            if (StreamStatus.NOT_FOUND.equals(status))
             {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
+            // Likewise, it may be "busy".
+            if (StreamStatus.IN_PROGRESS.equals(status))
+            {
+                return Response.status(Response.Status.CONFLICT).build();
+            }
+
+            // If it's not busy, and we know what it is, try and update...
             getStreamService().saveStream(id, stream, filters);
         }
         finally

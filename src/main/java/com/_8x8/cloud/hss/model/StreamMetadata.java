@@ -39,17 +39,17 @@ public class StreamMetadata
      * Holds the size of the particular file. Please note that this is the size of the file after filters have been
      * applied, and not the original size.
      */
-    private Long _fileSize;
+    private long _fileSize;
 
     /**
      * Holds the time at which the file was first seen.
      */
-    private Long _createdTime;
+    private long _createdTime;
 
     /**
      * Holds the time at which the file was last modified.
      */
-    private Long _lastModifiedTime;
+    private long _lastModifiedTime;
 
     public String getId() { return _id; }
     public void setId(final String id) { _id = id; }
@@ -57,12 +57,12 @@ public class StreamMetadata
     public StreamStatus getStatus() { return _status; }
     public void setStatus(final StreamStatus status) { _status = status; }
 
-    public Long getFileSize() { return _fileSize; }
-    public void setFileSize(final Long fileSize) { _fileSize = fileSize; }
+    public long getFileSize() { return _fileSize; }
+    public void setFileSize(final long fileSize) { _fileSize = fileSize; }
 
-    public Long getLastModified() { return _lastModifiedTime; }
-    public void setLastModified(final Long lastModifiedDate) { _lastModifiedTime = lastModifiedDate; }
+    public long getLastModified() { return _lastModifiedTime; }
+    public void setLastModified(final long lastModifiedDate) { _lastModifiedTime = lastModifiedDate; }
 
-    public Long getCreatedTime() { return _createdTime; }
-    public void setCreatedTime(final Long createdTime) { _createdTime = createdTime; }
+    public long getCreatedTime() { return _createdTime; }
+    public void setCreatedTime(final long createdTime) { _createdTime = createdTime; }
 }

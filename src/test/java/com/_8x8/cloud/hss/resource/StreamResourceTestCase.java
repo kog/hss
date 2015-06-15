@@ -105,13 +105,17 @@ public class StreamResourceTestCase
         // We're going to pretend we have this stream.
         doReturn(mock(InputStream.class)).when(_streamService).getStreamById(anyString(), anyListOf(String.class));
 
+        // Likewise, it's successful.
+        doReturn(StreamStatus.SUCCESSFUL).when(_streamService).getStatusForStreamById(anyString());
+
         final Response response = _resource.getStreamById("testvendor", Arrays.asList("some", "filters"));
 
         // Verify interactions.
         verify(_resource).getStreamById(anyString(), anyListOf(String.class));
         verify(_resource).validateId("testvendor");
-        verify(_resource).getStreamService();
+        verify(_resource, times(2)).getStreamService();
 
+        verify(_streamService).getStatusForStreamById(anyString());
         verify(_streamService).getStreamById(anyString(), anyListOf(String.class));
 
         verifyNoMoreCollaborations();
@@ -133,7 +137,7 @@ public class StreamResourceTestCase
         verify(_resource).validateId("testvendor");
         verify(_resource).getStreamService();
 
-        verify(_streamService).getStreamById(anyString(), anyListOf(String.class));
+        verify(_streamService).getStatusForStreamById(anyString());
 
         verifyNoMoreCollaborations();
 
@@ -165,6 +169,57 @@ public class StreamResourceTestCase
         verify(_resource).validateId(anyString());
 
         verifyNoMoreCollaborations();
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamById(String, List)} for the case where the stream is {@link StreamStatus#IN_PROGRESS}.
+     * We should get back a 409/CONFLICT here.
+     **/
+    @Test
+    public void testGetStreamForInProgress() throws Exception
+    {
+        doReturn(StreamStatus.IN_PROGRESS).when(_streamService).getStatusForStreamById(anyString());
+
+        final Response response = _resource.getStreamById("testvendor", Arrays.asList("some", "filters"));
+
+        // Verify interactions.
+        verify(_resource).getStreamById(anyString(), anyListOf(String.class));
+        verify(_resource).validateId("testvendor");
+        verify(_resource).getStreamService();
+
+        verify(_streamService).getStatusForStreamById(anyString());
+
+        verifyNoMoreCollaborations();
+
+        // It's in progress, we should get a 409/CONFLICT back.
+        Assert.assertThat(response.getStatus(), is(equalTo(Response.Status.CONFLICT.getStatusCode())));
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamById(String, List)} for the case where the stream is {@link StreamStatus#FAILED}.
+     * We should get back a 409/CONFLICT here. Users can grab the metadata for the ID to see what happened.
+     **/
+    @Test
+    public void testGetStreamForFailed() throws Exception
+    {
+        doReturn(StreamStatus.FAILED).when(_streamService).getStatusForStreamById(anyString());
+
+        final Response response = _resource.getStreamById("testvendor", Arrays.asList("some", "filters"));
+
+        // Verify interactions.
+        verify(_resource).getStreamById(anyString(), anyListOf(String.class));
+        verify(_resource).validateId("testvendor");
+        verify(_resource).getStreamService();
+
+        verify(_streamService).getStatusForStreamById(anyString());
+
+        verifyNoMoreCollaborations();
+
+        // TODO [kog@epiphanic.org - 6/14/2015]: Should probably fix the "failed" to erase the metadata, or set it to
+        // TODO [kog@epiphanic.org - 6/14/2015]: NOT_FOUND if it's a first upload.
+
+        // It's failed, we should get a 409/CONFLICT.
+        Assert.assertThat(response.getStatus(), is(equalTo(Response.Status.CONFLICT.getStatusCode())));
     }
 
     /**
@@ -327,7 +382,7 @@ public class StreamResourceTestCase
         // Nothing else should have happened here.
         verifyNoMoreCollaborations();
 
-        // Make sure we get a 204/NO CONTENT back.
+        // Make sure we get a 404/NOT FOUND back.
         Assert.assertThat(response.getStatus(), is(equalTo(Response.Status.NOT_FOUND.getStatusCode())));
 
         // And make sure we closed our stream...
@@ -362,6 +417,35 @@ public class StreamResourceTestCase
         verifyNoMoreCollaborations();
 
         // But we should still close our stream.
+        verifyStatic(times(1));
+        IOUtils.closeQuietly(_inputStream);
+    }
+
+    /**
+     * Tests {@link StreamResource#updateStream(String, List, InputStream)} for the case where we're trying to update
+     * a stream that is {@link StreamStatus#IN_PROGRESS}. We should get back a 409/CONFLICT.
+     **/
+    @Test
+    public void testUpdateStreamForInProgress() throws Exception
+    {
+        // Shoo, we're busy.
+        doReturn(StreamStatus.IN_PROGRESS).when(_streamService).getStatusForStreamById(anyString());
+
+        final Response response = _resource.updateStream("someId", Arrays.asList("some", "Filters"), _inputStream);
+
+        verify(_resource).updateStream(anyString(), anyListOf(String.class), any(InputStream.class));
+        verify(_resource).validateId("someId");
+        verify(_resource, times(1)).getStreamService();
+
+        verify(_streamService).getStatusForStreamById(anyString());
+
+        // Nothing else should have happened here.
+        verifyNoMoreCollaborations();
+
+        // Make sure we get a 409/CONFLICT as this stream is busy.
+        Assert.assertThat(response.getStatus(), is(equalTo(Response.Status.CONFLICT.getStatusCode())));
+
+        // And make sure we closed our stream...
         verifyStatic(times(1));
         IOUtils.closeQuietly(_inputStream);
     }
