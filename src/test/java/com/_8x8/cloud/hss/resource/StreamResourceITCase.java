@@ -291,8 +291,7 @@ public class StreamResourceITCase
         Assert.assertThat(1, greaterThan(response.getLength()));
 
         // Just to be sure...
-        Assert.assertThat(1, is(response.getHeaders().size()));
-        Assert.assertThat("Content-Length", not(equalTo(response.getHeaders().values().iterator().next())));
+        Assert.assertThat(response.getHeaders().containsKey("Location"), is(false));
 
         // And now make sure what's on our filesystem matches what we thought we updated to.
         Assert.assertThat(updatedPayload, is(FileUtils.readFileToString(_file)));

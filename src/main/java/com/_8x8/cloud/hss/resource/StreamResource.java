@@ -1,8 +1,14 @@
 package com._8x8.cloud.hss.resource;
 
+import com._8x8.cloud.hss.model.StreamMetadata;
 import com._8x8.cloud.hss.model.StreamMetadataCollection;
 import com._8x8.cloud.hss.model.StreamStatus;
 import com._8x8.cloud.hss.service.IStreamService;
+import com.wordnik.swagger.annotations.Api;
+import com.wordnik.swagger.annotations.ApiOperation;
+import com.wordnik.swagger.annotations.ApiParam;
+import com.wordnik.swagger.annotations.ApiResponse;
+import com.wordnik.swagger.annotations.ApiResponses;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -23,6 +29,9 @@ import javax.ws.rs.core.UriInfo;
 import java.io.InputStream;
 import java.util.List;
 import java.util.regex.Pattern;
+
+// TODO [kog@epiphanic.org - 6/16/2015]: Looks like there's an issue between Swagger 1.3 and 2.x with allowableTypes.
+// TODO [kog@epiphanic.org - 6/16/2015]: It's also why Swagger-UI keeps inserting extra 200/OK options (https://github.com/swagger-api/swagger-ui/issues/1266)
 
 /**
  * Provides a resource for dealing with the "streams" - the middle S in HSS. You must not cross them.<p/>
@@ -49,6 +58,7 @@ import java.util.regex.Pattern;
  * @author kog@epiphanic.org
  * @since 05/28/2015
  */
+@Api(value = "stream", description = "A resource for handling streams (application/octet-stream) and their metadata.")
 @Path("streams")
 public class StreamResource
 {
@@ -91,6 +101,10 @@ public class StreamResource
      *
      * @return A 200/OK with metadata regarding zero or more streams. May be empty, but never null.
      */
+    @ApiOperation(value = "List all streams known to the system", response = StreamMetadataCollection.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "A collection of zero or more streams. May be empty, but never null.")
+    })
     @GET
     public Response getStreamMetadata() throws Exception
     {
@@ -108,9 +122,14 @@ public class StreamResource
      * @return 200/OK with the {@link com._8x8.cloud.hss.model.StreamMetadata},
      *         403/FORBIDDEN if the stream ID is invalid
      */
+    @ApiOperation(value = "Finds the metadata associated with a given stream, by ID.", response = StreamMetadata.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "The metadata associated with the given stream, if known."),
+            @ApiResponse(code = 403, message = "If the stream ID is considered invalid.")
+    })
     @Path("/{id}/status")
     @GET
-    public Response getStreamMetadataForId(final @PathParam("id") String id) throws Exception
+    public Response getStreamMetadataForId(@ApiParam(value = "ID of the stream to fetch", required = true) final @PathParam("id") String id) throws Exception
     {
         validateId(id);
 
@@ -128,10 +147,19 @@ public class StreamResource
      *         404/NOT FOUND if the ID is valid but unknown
      *         409/CONFLICT if the ID is known, but {@link StreamStatus#IN_PROGRESS} or {@link StreamStatus#FAILED}.
      */
+    @ApiOperation(value = "Gets a stream, by ID. Please note that this is an application/octet-stream.", response = InputStream.class)
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "The stream, if known and valid."),
+            @ApiResponse(code = 403, message = "If the stream ID is considered invalid."),
+            @ApiResponse(code = 404, message = "If the stream ID is unknown to the system."),
+            @ApiResponse(code = 409, message = "If the ID is known, but the stream is in progress or failed.")
+    })
     @Path("/{id}")
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response getStreamById(final @PathParam("id") String id, @QueryParam("filters") final List<String> filters) throws Exception
+    public Response getStreamById(@ApiParam(value = "ID of the stream to fetch", required = true) final @PathParam("id") String id,
+                                  @ApiParam(value = "A list of zero or more filters to apply to the stream, on the server side. May be empty.", required = false)
+                                    @QueryParam("filters") final List<String> filters) throws Exception
     {
         validateId(id);
 
@@ -167,10 +195,20 @@ public class StreamResource
      *         403/FORBIDDEN if the ID is invalid,
      *         409/CONFLICT if the ID is valid but already in use.
      */
+    @ApiOperation(value = "Attempts to persist a given application/octet-stream in a create operation, with optionally applied filters.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 201, message = "A created response, with a location header pointing to the new resource."),
+            @ApiResponse(code = 403, message = "If the stream ID is considered invalid."),
+            @ApiResponse(code = 409, message = "If the ID is already in use.")
+    })
     @Path("/{id}")
     @POST
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-    public Response createStream(final @Context UriInfo uriInfo, final @PathParam("id") String id, @QueryParam("filters") final List<String> filters, final InputStream stream) throws Exception
+    public Response createStream(final @Context UriInfo uriInfo,
+                                 @ApiParam(value = "ID of the stream to fetch", required = true) final @PathParam("id") String id,
+                                 @ApiParam(value = "A list of zero or more filters to apply to the stream, on the server side. May be empty.", required = false)
+                                     @QueryParam("filters") final List<String> filters,
+                                 @ApiParam(value = "An actual application/octet-stream of whatever object you'd like to store.", required = true) final InputStream stream) throws Exception
     {
         try
         {
@@ -204,10 +242,20 @@ public class StreamResource
      *         404/NOT FOUND if the ID is valid but not known,
      *         409/CONFLICT if the ID is known, but the stream is in a state such that it cannot be updated.
      */
+    @ApiOperation(value = "Attempts to persist a given application/octet-stream in an update operation, with optionally applied filters.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 204, message = "No content if the update was successful."),
+            @ApiResponse(code = 403, message = "If the stream ID is considered invalid."),
+            @ApiResponse(code = 404, message = "If the ID is valid, but not known"),
+            @ApiResponse(code = 409, message = "If the ID is already in use.")
+    })
     @Path("/{id}")
     @PUT
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-    public Response updateStream(final @PathParam("id") String id, @QueryParam("filters") final List<String> filters, final InputStream stream) throws Exception
+    public Response updateStream(@ApiParam(value = "ID of the stream to fetch", required = true) final @PathParam("id") String id,
+                                 @ApiParam(value = "A list of zero or more filters to apply to the stream, on the server side. May be empty.", required = false)
+                                    @QueryParam("filters") final List<String> filters,
+                                 @ApiParam(value = "An actual application/octet-stream of whatever object you'd like to store.", required = true) final InputStream stream) throws Exception
     {
         try
         {
@@ -248,9 +296,14 @@ public class StreamResource
      * @return 202/ACCEPTED unless an exception is thrown,
      *         403/FORBIDDEN if the ID is invalid.
      */
+    @ApiOperation(value = "Attempts to delete a given stream.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 202, message = "If the ID is valid."),
+            @ApiResponse(code = 403, message = "If the stream ID is considered invalid.")
+    })
     @Path("/{id}")
     @DELETE
-    public Response deleteStream(final @PathParam("id") String id) throws Exception
+    public Response deleteStream(@ApiParam(value = "ID of the stream to fetch", required = true) final @PathParam("id") String id) throws Exception
     {
         validateId(id);
         getStreamService().deleteStream(id);

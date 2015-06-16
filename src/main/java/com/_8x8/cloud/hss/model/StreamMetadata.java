@@ -1,5 +1,8 @@
 package com._8x8.cloud.hss.model;
 
+import com.wordnik.swagger.annotations.ApiModel;
+import com.wordnik.swagger.annotations.ApiModelProperty;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -13,6 +16,7 @@ import javax.xml.bind.annotation.XmlType;
  * @author kog@epiphanic.org
  * @since 06/02/2015
  */
+@ApiModel(value = "Provides metadata about a given stream, even if unknown.")
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.PROPERTY)
 @XmlType(propOrder = {
@@ -23,7 +27,6 @@ import javax.xml.bind.annotation.XmlType;
         "createdTime"
 })
 public class StreamMetadata
-
 {
     /**
      * Holds the ID of the stream.
@@ -51,18 +54,23 @@ public class StreamMetadata
      */
     private long _lastModifiedTime;
 
+    @ApiModelProperty(value = "Stream Id", required = true)
     public String getId() { return _id; }
     public void setId(final String id) { _id = id; }
 
+    @ApiModelProperty(value = "Stream status", required = true)
     public StreamStatus getStatus() { return _status; }
     public void setStatus(final StreamStatus status) { _status = status; }
 
+    @ApiModelProperty(value = "Stream size, after filters have been applied", required = false)
     public long getFileSize() { return _fileSize; }
     public void setFileSize(final long fileSize) { _fileSize = fileSize; }
 
+    @ApiModelProperty(value = "Last modification time of the stream", required = false)
     public long getLastModified() { return _lastModifiedTime; }
     public void setLastModified(final long lastModifiedDate) { _lastModifiedTime = lastModifiedDate; }
 
+    @ApiModelProperty(value = "Creation time of the stream", required = false)
     public long getCreatedTime() { return _createdTime; }
     public void setCreatedTime(final long createdTime) { _createdTime = createdTime; }
 }

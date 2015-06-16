@@ -12,6 +12,7 @@
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
     </listener>
 
+    <!-- Map our actual Jersey-based API dispatch to /api/* -->
     <servlet>
         <servlet-name>api-dispatch</servlet-name>
         <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
@@ -33,5 +34,26 @@
     <servlet-mapping>
         <servlet-name>api-dispatch</servlet-name>
         <url-pattern>/api/*</url-pattern>
+    </servlet-mapping>
+
+    <!-- Sacrifice our blood sacrifices to Swagger-UI -->
+    <servlet>
+        <servlet-name>swagger</servlet-name>
+        <servlet-class>com.wordnik.swagger.jersey.config.JerseyJaxrsConfig</servlet-class>
+        <init-param>
+            <param-name>api.version</param-name>
+            <param-value>1.0.0</param-value>
+        </init-param>
+        <init-param>
+            <param-name>swagger.api.basepath</param-name>
+            <param-value>http://localhost:8080/hss/api</param-value>
+        </init-param>
+        <load-on-startup>2</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>swagger</servlet-name>
+        <!-- We're not actually going to hit this servlet... this is more about configuring context. -->
+        <url-pattern>/doc</url-pattern>
     </servlet-mapping>
 </web-app>

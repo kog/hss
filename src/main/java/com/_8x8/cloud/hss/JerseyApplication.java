@@ -4,6 +4,9 @@ package com._8x8.cloud.hss;
 
 import com._8x8.cloud.hss.resource.StreamResource;
 import com._8x8.cloud.hss.resource.TestingResource;
+import com.wordnik.swagger.jersey.listing.ApiListingResourceJSON;
+import com.wordnik.swagger.jersey.listing.JerseyApiDeclarationProvider;
+import com.wordnik.swagger.jersey.listing.JerseyResourceListingProvider;
 import org.glassfish.jersey.message.GZipEncoder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.filter.EncodingFilter;
@@ -26,5 +29,8 @@ public class JerseyApplication extends ResourceConfig
         // Demonstrate that we could just use the Accept-Encoding header of gzip here...
         register(EncodingFilter.class);
         register(GZipEncoder.class);
+
+        // Make Swagger happy.
+        registerClasses(ApiListingResourceJSON.class, JerseyApiDeclarationProvider.class, JerseyResourceListingProvider.class);
     }
 }
