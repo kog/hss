@@ -4,11 +4,12 @@ import com._8x8.cloud.hss.model.StreamMetadata;
 import com._8x8.cloud.hss.model.StreamMetadataCollection;
 import com._8x8.cloud.hss.model.StreamStatus;
 import com._8x8.cloud.hss.service.IStreamService;
-import com.wordnik.swagger.annotations.Api;
-import com.wordnik.swagger.annotations.ApiOperation;
-import com.wordnik.swagger.annotations.ApiParam;
-import com.wordnik.swagger.annotations.ApiResponse;
-import com.wordnik.swagger.annotations.ApiResponses;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.ResponseHeader;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -58,7 +59,7 @@ import java.util.regex.Pattern;
  * @author kog@epiphanic.org
  * @since 05/28/2015
  */
-@Api(value = "stream", description = "A resource for handling streams (application/octet-stream) and their metadata.")
+@Api(value = "stream", description = "A resource for handling streams (application/octet-stream) and their metadata.", tags = {"streams"})
 @Path("streams")
 public class StreamResource
 {
@@ -102,9 +103,6 @@ public class StreamResource
      * @return A 200/OK with metadata regarding zero or more streams. May be empty, but never null.
      */
     @ApiOperation(value = "List all streams known to the system", response = StreamMetadataCollection.class)
-    @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "A collection of zero or more streams. May be empty, but never null.")
-    })
     @GET
     public Response getStreamMetadata() throws Exception
     {
@@ -124,7 +122,6 @@ public class StreamResource
      */
     @ApiOperation(value = "Finds the metadata associated with a given stream, by ID.", response = StreamMetadata.class)
     @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "The metadata associated with the given stream, if known."),
             @ApiResponse(code = 403, message = "If the stream ID is considered invalid.")
     })
     @Path("/{id}/status")
@@ -149,7 +146,6 @@ public class StreamResource
      */
     @ApiOperation(value = "Gets a stream, by ID. Please note that this is an application/octet-stream.", response = InputStream.class)
     @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "The stream, if known and valid."),
             @ApiResponse(code = 403, message = "If the stream ID is considered invalid."),
             @ApiResponse(code = 404, message = "If the stream ID is unknown to the system."),
             @ApiResponse(code = 409, message = "If the ID is known, but the stream is in progress or failed.")
@@ -158,7 +154,7 @@ public class StreamResource
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response getStreamById(@ApiParam(value = "ID of the stream to fetch", required = true) final @PathParam("id") String id,
-                                  @ApiParam(value = "A list of zero or more filters to apply to the stream, on the server side. May be empty.", required = false)
+                                  @ApiParam(value = "A list of zero or more filters to apply to the stream, on the server side. May be empty.", required = false, allowableValues = "zip,encrypt,base64", allowMultiple = true)
                                     @QueryParam("filters") final List<String> filters) throws Exception
     {
         validateId(id);
@@ -197,7 +193,8 @@ public class StreamResource
      */
     @ApiOperation(value = "Attempts to persist a given application/octet-stream in a create operation, with optionally applied filters.")
     @ApiResponses(value = {
-            @ApiResponse(code = 201, message = "A created response, with a location header pointing to the new resource."),
+            @ApiResponse(code = 201, message = "A created response, with a location header pointing to the new resource.",
+                         responseHeaders = {@ResponseHeader(name = "Location", description = "URL to the newly created resource", response = String.class)}),
             @ApiResponse(code = 403, message = "If the stream ID is considered invalid."),
             @ApiResponse(code = 409, message = "If the ID is already in use.")
     })
@@ -206,7 +203,7 @@ public class StreamResource
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     public Response createStream(final @Context UriInfo uriInfo,
                                  @ApiParam(value = "ID of the stream to fetch", required = true) final @PathParam("id") String id,
-                                 @ApiParam(value = "A list of zero or more filters to apply to the stream, on the server side. May be empty.", required = false)
+                                 @ApiParam(value = "A list of zero or more filters to apply to the stream, on the server side. May be empty.", required = false, allowableValues = "zip,encrypt,base64", allowMultiple = true)
                                      @QueryParam("filters") final List<String> filters,
                                  @ApiParam(value = "An actual application/octet-stream of whatever object you'd like to store.", required = true) final InputStream stream) throws Exception
     {
@@ -253,7 +250,7 @@ public class StreamResource
     @PUT
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     public Response updateStream(@ApiParam(value = "ID of the stream to fetch", required = true) final @PathParam("id") String id,
-                                 @ApiParam(value = "A list of zero or more filters to apply to the stream, on the server side. May be empty.", required = false)
+                                 @ApiParam(value = "A list of zero or more filters to apply to the stream, on the server side. May be empty.", required = false, allowableValues = "zip,encrypt,base64", allowMultiple = true)
                                     @QueryParam("filters") final List<String> filters,
                                  @ApiParam(value = "An actual application/octet-stream of whatever object you'd like to store.", required = true) final InputStream stream) throws Exception
     {

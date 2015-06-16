@@ -4,9 +4,8 @@ package com._8x8.cloud.hss;
 
 import com._8x8.cloud.hss.resource.StreamResource;
 import com._8x8.cloud.hss.resource.TestingResource;
-import com.wordnik.swagger.jersey.listing.ApiListingResourceJSON;
-import com.wordnik.swagger.jersey.listing.JerseyApiDeclarationProvider;
-import com.wordnik.swagger.jersey.listing.JerseyResourceListingProvider;
+import io.swagger.jaxrs.listing.ApiListingResource;
+import io.swagger.jaxrs.listing.SwaggerSerializers;
 import org.glassfish.jersey.message.GZipEncoder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.filter.EncodingFilter;
@@ -31,6 +30,6 @@ public class JerseyApplication extends ResourceConfig
         register(GZipEncoder.class);
 
         // Make Swagger happy.
-        registerClasses(ApiListingResourceJSON.class, JerseyApiDeclarationProvider.class, JerseyResourceListingProvider.class);
+        registerClasses(ApiListingResource.class, SwaggerSerializers.class);
     }
 }

@@ -39,7 +39,7 @@
     <!-- Sacrifice our blood sacrifices to Swagger-UI -->
     <servlet>
         <servlet-name>swagger</servlet-name>
-        <servlet-class>com.wordnik.swagger.jersey.config.JerseyJaxrsConfig</servlet-class>
+        <servlet-class>io.swagger.jersey.config.JerseyJaxrsConfig</servlet-class>
         <init-param>
             <param-name>api.version</param-name>
             <param-value>1.0.0</param-value>
