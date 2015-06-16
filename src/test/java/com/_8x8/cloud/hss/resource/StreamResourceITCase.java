@@ -775,7 +775,7 @@ public class StreamResourceITCase
 
         // Since our modified time from the DB is NOW(), it'll actually be after the file last mod time. So let's just
         // make sure for this test that the timestamps are close.
-        Assert.assertThat(streamMetadata.getLastModified() - file.lastModified(), is(lessThan(200L)));
+        Assert.assertThat(streamMetadata.getLastModified() - file.lastModified(), is(lessThan(1000L)));
 
         // This is pretty much invariant at the moment...
         Assert.assertThat(streamMetadata.getStatus(), is(StreamStatus.SUCCESSFUL));
