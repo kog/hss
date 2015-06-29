@@ -1,5 +1,6 @@
 package com._8x8.cloud.hss.resource;
 
+import com._8x8.cloud.hss.model.StreamMetadata;
 import com._8x8.cloud.hss.model.StreamStatus;
 import com._8x8.cloud.hss.service.StreamService;
 import org.apache.commons.io.IOUtils;
@@ -18,20 +19,12 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyListOf;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.*;
+import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.verifyStatic;
 
@@ -519,7 +512,32 @@ public class StreamResourceTestCase
     @Test
     public void testGetStreamMetadataForId() throws Exception
     {
-        Assert.assertThat(200, is(equalTo(_resource.getStreamMetadataForId("asdf").getStatus())));
+        doReturn(new StreamMetadata()).when(_streamService).getMetadataForStreamById(anyString());
+
+        Assert.assertThat(_resource.getStreamMetadataForId("asdf").getStatus(), is(200));
+
+        verify(_resource).getStreamMetadataForId("asdf");
+        verify(_resource).validateId("asdf");
+        verify(_resource).getStreamService();
+
+        verify(_streamService).getMetadataForStreamById("asdf");
+
+        verifyNoMoreCollaborations();
+    }
+
+    /**
+     * Tests {@link StreamResource#getStreamMetadataForId(String)} for the case where the ID is unknown. We should get
+     * back a 404/NOT FOUND here.
+     */
+    @Test
+    public void testGetStreamMetadataForUnknownId() throws Exception
+    {
+        final StreamMetadata metadata = new StreamMetadata();
+        metadata.setStatus(StreamStatus.NOT_FOUND);
+
+        doReturn(metadata).when(_streamService).getMetadataForStreamById(anyString());
+
+        Assert.assertThat(_resource.getStreamMetadataForId("asdf").getStatus(), is(404));
 
         verify(_resource).getStreamMetadataForId("asdf");
         verify(_resource).validateId("asdf");

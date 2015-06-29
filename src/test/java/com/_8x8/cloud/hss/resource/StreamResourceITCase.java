@@ -137,9 +137,6 @@ public class StreamResourceITCase
     @Test
     public void testGetStreamByIdNotKnown() throws Exception
     {
-        // Verify nothing is on the filesystem with that ID.
-        Assert.assertThat(StreamStatus.NOT_FOUND, is(getStreamMetadata(_uuid).getStatus()));
-
         final Response response = _client.path(_uuid).request("application/octet-stream").get();
 
         // We should get a 404/NOT FOUND here.
@@ -663,26 +660,16 @@ public class StreamResourceITCase
     }
 
     /**
-     * Tests {@link StreamResource#getStreamMetadataForId(String)}for the case where the ID is unknown. We should get back
-     * a status with only part of the metadata populated: non-existent files can't have a size.
+     * Tests {@link StreamResource#getStreamMetadataForId(String)}for the case where the ID is unknown. We should get
+     * back a 404/NOT FOUND.
      */
     @Test
     public void testGetStreamMetadataForUnknownId() throws Exception
     {
         final Response response = _client.path(_uuid).path("status").request().get();
 
-        // We should get back a 200/OK with metadata about our input file.
-        Assert.assertThat(Response.Status.OK.getStatusCode(), is(response.getStatus()));
-
-        final StreamMetadata metadata = response.readEntity(StreamMetadata.class);
-
-        // We'll have an ID and a status, always.
-        Assert.assertThat(_uuid, is(metadata.getId()));
-        Assert.assertThat(StreamStatus.NOT_FOUND, is(metadata.getStatus()));
-
-        // We will not have a last mod time or a file size here.
-        Assert.assertThat(metadata.getLastModified(), is(0L));
-        Assert.assertThat(metadata.getFileSize(), is(0L));
+        // We should get back a 404/NOT FOUND here.
+        Assert.assertThat(Response.Status.NOT_FOUND.getStatusCode(), is(response.getStatus()));
     }
 
     /**
@@ -793,7 +780,9 @@ public class StreamResourceITCase
         FileUtils.copyInputStreamToFile(stream, file);
 
         // Slap in our metadata, complete with file size. Audit timestamps will be handled via the persistence mechanism.
-        final StreamMetadata metadata = getStreamMetadata(file.getName());
+        final StreamMetadata metadata = new StreamMetadata();
+
+        metadata.setId(file.getName());
         metadata.setStatus(StreamStatus.SUCCESSFUL);
         metadata.setFileSize(file.length());
 
@@ -852,7 +841,7 @@ public class StreamResourceITCase
     {
         final Response response = _client.path(id).path("status").request().get();
 
-        Assert.assertThat(Response.Status.OK.getStatusCode(), is(response.getStatus()));
+        Assert.assertThat(response.getStatus(), is(Response.Status.OK.getStatusCode()));
         return response.readEntity(StreamMetadata.class);
     }
 

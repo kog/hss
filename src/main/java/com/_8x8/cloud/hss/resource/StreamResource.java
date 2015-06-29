@@ -118,11 +118,13 @@ public class StreamResource
      * @param id The ID to use for the stream. Must not be blank, must be valid.
      *
      * @return 200/OK with the {@link com._8x8.cloud.hss.model.StreamMetadata},
-     *         403/FORBIDDEN if the stream ID is invalid
+     *         403/FORBIDDEN if the stream ID is invalid,
+     *         404/NOT FOUND if the stream ID is unknown.
      */
     @ApiOperation(value = "Finds the metadata associated with a given stream, by ID.", response = StreamMetadata.class)
     @ApiResponses(value = {
-            @ApiResponse(code = 403, message = "If the stream ID is considered invalid.")
+            @ApiResponse(code = 403, message = "If the stream ID is considered invalid."),
+            @ApiResponse(code = 404, message = "If the stream ID is unknown to the system.")
     })
     @Path("/{id}/status")
     @GET
@@ -130,7 +132,14 @@ public class StreamResource
     {
         validateId(id);
 
-        return Response.ok(getStreamService().getMetadataForStreamById(id)).build();
+        final StreamMetadata metadata = getStreamService().getMetadataForStreamById(id);
+
+        if (StreamStatus.NOT_FOUND == metadata.getStatus())
+        {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        return Response.ok(metadata).build();
     }
 
     /**
