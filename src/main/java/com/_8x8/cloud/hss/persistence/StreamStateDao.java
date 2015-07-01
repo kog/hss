@@ -110,7 +110,7 @@ public class StreamStateDao extends NamedParameterJdbcDaoSupport implements IStr
     /**
      * Provides a {@link RowMapper} that we can use to create a {@link StreamMetadata} from a given {@link ResultSet}.
      */
-    class StreamMetadataMapper implements RowMapper<StreamMetadata>
+    static class StreamMetadataMapper implements RowMapper<StreamMetadata>
     {
         @Override
         public StreamMetadata mapRow(final ResultSet rs, final int rowNum) throws SQLException
